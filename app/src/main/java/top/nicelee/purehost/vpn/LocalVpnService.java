@@ -33,7 +33,7 @@ public class LocalVpnService extends VpnService {
     FileOutputStream vpnOutput;
 
     //收到的IP报文Buffer
-    byte[] m_Packet;
+    private final byte[] m_Packet = new byte[1024 * 64];
 
     //方便解析
     IPHeader m_IPHeader;
@@ -76,7 +76,7 @@ public class LocalVpnService extends VpnService {
     {
         super.onCreate();
         isClosed = false;
-        m_Packet = new byte[20000];
+
         m_IPHeader = new IPHeader(m_Packet, 0);
         m_TCPHeader = new TCPHeader(m_Packet, 20);
         m_UDPHeader = new UDPHeader(m_Packet, 20);
