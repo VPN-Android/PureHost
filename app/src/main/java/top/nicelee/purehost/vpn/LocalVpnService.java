@@ -1,10 +1,8 @@
 package top.nicelee.purehost.vpn;
 
 import android.net.VpnService;
-import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -27,20 +25,6 @@ public class LocalVpnService {
 
     private static final String TAG = "LocalVpnService";
 
-//    public static LocalVpnService Instance;
-    ParcelFileDescriptor fileDescriptor;
-    FileInputStream vpnInput;
-    FileOutputStream vpnOutput;
-
-    //收到的IP报文Buffer
-    private final byte[] m_Packet = new byte[1024 * 64];
-
-    //方便解析
-    IPHeader m_IPHeader;
-    TCPHeader m_TCPHeader;
-    UDPHeader m_UDPHeader;
-    ByteBuffer m_DNSBuffer;
-
     String localIP = "168.168.168.168";
     int intLocalIP = CommonMethods.ipStringToInt(localIP);
     TCPServer tcpServer;
@@ -56,14 +40,6 @@ public class LocalVpnService {
 
         udpServer.stop();
         //tcpServer.stop();
-        try {
-            vpnInput.close();
-            vpnOutput.close();
-            fileDescriptor.close();
-            fileDescriptor = null;
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
         isClosed = true;
     }
 
@@ -71,55 +47,15 @@ public class LocalVpnService {
     public void onCreate(VpnService vpnService) {
         isClosed = false;
 
-        m_IPHeader = new IPHeader(m_Packet, 0);
-        m_TCPHeader = new TCPHeader(m_Packet, 20);
-        m_UDPHeader = new UDPHeader(m_Packet, 20);
-        m_DNSBuffer = ((ByteBuffer) ByteBuffer.wrap(m_Packet).position(28)).slice();
-
-
-        fileDescriptor = ParcelFileDescriptorHelper.INSTANCE.establish(vpnService, localIP);
-
-        vpnInput = new FileInputStream(fileDescriptor.getFileDescriptor());
-        vpnOutput = new FileOutputStream(fileDescriptor.getFileDescriptor());
-
-//        Instance = this;
         tcpServer = new TCPServer(localIP);
         udpServer = new UDPServer(localIP);
-
-
-        Thread th = new Thread(() -> {
-            int size = 0;
-            try {
-                Log.d(TAG, "读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
-                while ((size = vpnInput.read(m_Packet)) >= 0) {
-                    if (isClosed) {
-                        vpnInput.close();
-                        vpnOutput.close();
-                        throw new Exception("LocalServer stopped.");
-                    }
-                    if (size == 0) {
-                        continue;
-                    }
-                    Log.d(TAG, "读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
-                    onIPPacketReceived(m_IPHeader, size);
-                }
-            } catch (Exception e) {
-                //e.printStackTrace();
-                Log.d(TAG, "接收报文出现错误!!!!!!!!!!!!!!!!!!!!!!!!!");
-            } finally {
-                stopVPN();
-            }
-
-        });
-        th.setName("VPN Service - Thread");
-        th.start();
 
         //tcpServer.start();
         udpServer.start();
     }
 
 
-    private void onTCPPacketReceived(IPHeader ipHeader, int size) throws IOException {
+    public void onTCPPacketReceived(FileOutputStream vpnOutput, TCPHeader m_TCPHeader, IPHeader ipHeader, int size) throws IOException {
         TCPHeader tcpHeader = m_TCPHeader;
         tcpHeader.m_Offset = ipHeader.getHeaderLength();
 
@@ -157,7 +93,7 @@ public class LocalVpnService {
         }
     }
 
-    private void onUDPPacketReceived(IPHeader ipHeader, int size) {
+    public void onUDPPacketReceived(FileOutputStream vpnOutput, UDPHeader m_UDPHeader, ByteBuffer m_DNSBuffer, IPHeader ipHeader, int size) {
         UDPHeader udpHeader = m_UDPHeader;
         udpHeader.m_Offset = ipHeader.getHeaderLength();
         int originIP = ipHeader.getSourceIP();
@@ -231,20 +167,20 @@ public class LocalVpnService {
         }
     }
 
-    void onIPPacketReceived(IPHeader ipHeader, int size) throws IOException {
-        Log.d(TAG, "LocalVpnService: 收到IP报文" + size + "!!!!!!!!!!!!!!!!!!!!!!!!!" + ipHeader.toString());
-        switch (ipHeader.getProtocol()) {
-            case IPHeader.TCP:
-                onTCPPacketReceived(ipHeader, size);
-                break;
-            case IPHeader.UDP:
-                onUDPPacketReceived(ipHeader, size);
-                break;
-            default:
-                //vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
-                break;
-        }
-    }
+//    void onIPPacketReceived(IPHeader ipHeader, int size) throws IOException {
+//        Log.d(TAG, "LocalVpnService: 收到IP报文" + size + "!!!!!!!!!!!!!!!!!!!!!!!!!" + ipHeader.toString());
+//        switch (ipHeader.getProtocol()) {
+//            case IPHeader.TCP:
+//                onTCPPacketReceived(ipHeader, size);
+//                break;
+//            case IPHeader.UDP:
+//                onUDPPacketReceived(ipHeader, size);
+//                break;
+//            default:
+//                //vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
+//                break;
+//        }
+//    }
 
     public void createDNSResponseToAQuery(byte[] rawData, DnsPacket dnsPacket, String ipAddr) {
         Question question = dnsPacket.Questions[0];
@@ -265,10 +201,10 @@ public class LocalVpnService {
 
     }
 
-    public void sendUDPPacket(IPHeader ipHeader, UDPHeader udpHeader) {
+    public void sendUDPPacket(FileOutputStream vpnOutput, IPHeader ipHeader, UDPHeader udpHeader) {
         try {
             CommonMethods.ComputeUDPChecksum(ipHeader, udpHeader);
-            this.vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
+            vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
         } catch (IOException e) {
             e.printStackTrace();
         }
