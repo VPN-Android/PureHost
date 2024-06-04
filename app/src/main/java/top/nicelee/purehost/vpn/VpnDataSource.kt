@@ -26,8 +26,13 @@ class VpnDataSource {
             }
             return field
         }
+
+    private var started = false
+
     suspend fun startProcessVpnPacket(byteArray: ByteArray, vpnService: VpnService, localIP: String) = callbackFlow {
         withContext(Dispatchers.IO) {
+            started = true
+
             fileDescriptor = ParcelFileDescriptorHelper.establish(vpnService, localIP)
             fileDescriptor?.use {
                 vpnOutput = FileOutputStream(it.fileDescriptor)
@@ -36,24 +41,32 @@ class VpnDataSource {
                 vpnInput?.use { vi->
                     Log.d(TAG, "开始!!!!!!!!!!!!!!!!!!!!!!!!!")
                     runCatching {
-                        var size: Int
-                        while ((vi.read(byteArray).also { read -> size = read }) >= 0) {
+                        var size = 0
+                        while (started && ((vi.read(byteArray).also { read -> size = read }) >= 0)) {
                             if (size == 0) {
                                 sleep(10)
                                 Log.d(TAG, "读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!, empty")
                                 continue
                             }
-                            trySend(size)
+                            if (started) {
+                                trySend(size)
+                            }
                             Log.d(TAG, "读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!")
                         }
+                        channel.close()
                     }
                 }
             }
-            awaitClose {
-                kotlin.runCatching { vpnInput?.close() }
-                kotlin.runCatching { vpnOutput?.close() }
-                kotlin.runCatching { fileDescriptor?.close() }
-            }
         }
+
+        awaitClose {
+            kotlin.runCatching { vpnInput?.close() }
+            kotlin.runCatching { vpnOutput?.close() }
+            kotlin.runCatching { fileDescriptor?.close() }
+        }
+    }
+
+    fun stopProcessVpnPacket() {
+        started = false
     }
 }

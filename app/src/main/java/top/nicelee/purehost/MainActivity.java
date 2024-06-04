@@ -8,10 +8,14 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.lifecycle.ViewModel;
+
+import org.koin.java.KoinJavaComponent;
+
 import top.nicelee.purehost.vpn.LocalVpnServiceKT;
+import top.nicelee.purehost.vpn.VpnViewModel;
 import top.nicelee.purehost.vpn.config.ConfigReader;
 
 public class MainActivity extends Activity {
@@ -25,6 +29,8 @@ public class MainActivity extends Activity {
     Button btnReadHost;
     Button btnWriteHost;
     EditText textHost;
+
+    private VpnViewModel mViewModel = KoinJavaComponent.get(VpnViewModel.class);
 
     public static String path;
     @Override
@@ -118,7 +124,8 @@ public class MainActivity extends Activity {
     private void stopVPN(){
         //serviceIntent = new Intent(this, LocalVpnService.class);
         //stopService(serviceIntent);
-        LocalVpnServiceKT.Companion.getInstance().stopVPN();
+//        LocalVpnServiceKT.Companion.getInstance().stopVPN();
+        mViewModel.stopVPN();
         btnStart.setEnabled(true);
         btnEnd.setEnabled(false);
         btnReadHost.setEnabled(true);

@@ -2,34 +2,21 @@ package top.nicelee.purehost.vpn
 
 import android.content.Context
 import android.net.VpnService
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import top.nicelee.purehost.vpn.ip.IPHeader
 import top.nicelee.purehost.vpn.ip.TCPHeader
 import top.nicelee.purehost.vpn.ip.UDPHeader
+import java.io.FileOutputStream
 import java.nio.ByteBuffer
 
 class VpnViewModel(private val context: Context, private val source: VpnDataSource) : ViewModel() {
 
-
-    private val _tcpPacketFlow = MutableSharedFlow<Int>(
-        replay = 0,
-        extraBufferCapacity = 1024 * 64,
-        onBufferOverflow = BufferOverflow.SUSPEND
-    )
-
-    val tcpPacketFlow: SharedFlow<Int> = _tcpPacketFlow
-
-
-    private val _udpPacketFlow = MutableSharedFlow<Int>(
-        replay = 0,
-        extraBufferCapacity = 1024 * 64,
-        onBufferOverflow = BufferOverflow.SUSPEND
-    )
-
-    val udpPacketFlow: SharedFlow<Int> = _udpPacketFlow
+    private val _vpnStatusLiveData = MutableStateFlow<Int>(-1)
+    val vpnStatusLiveData: StateFlow<Int> = _vpnStatusLiveData
 
     //收到的IP报文Buffer
     private val m_Packet = ByteArray(1024 * 64)
@@ -65,6 +52,17 @@ class VpnViewModel(private val context: Context, private val source: VpnDataSour
         }
     }
 
-    fun getSendOutput() = source.vpnOutput
+    fun stopVPN() {
+        source.stopProcessVpnPacket()
+        _vpnStatusLiveData.tryEmit(0)
+    }
+
+    fun startVPN() {
+        _vpnStatusLiveData.tryEmit(1)
+    }
+
+    fun getSendOutput(): FileOutputStream? {
+        return source.vpnOutput
+    }
 
 }

@@ -22,6 +22,7 @@ public class UDPServer implements Runnable {
 	public String localIP = "7.7.7.7";
 	public int port = 7777;
 	public String vpnLocalIP;
+	private LocalVpnServiceKT vpnService;
 	
 	final int MAX_LENGTH = 1024;
 	byte[] receMsgs = new byte[MAX_LENGTH];
@@ -41,7 +42,8 @@ public class UDPServer implements Runnable {
 	public void stop(){
 		udpSocket.close();
 	}
-	public UDPServer(VpnService vpnService, String localIP) {
+	public UDPServer(LocalVpnServiceKT vpnService, String localIP) {
+		this.vpnService = vpnService;
 		this.vpnLocalIP = localIP;
 		try {
 			init(vpnService);
@@ -50,7 +52,7 @@ public class UDPServer implements Runnable {
 		}
 	}
 	
-	public void init(VpnService vpnService) throws UnknownHostException, SocketException {
+	public void init(LocalVpnServiceKT vpnService) throws UnknownHostException, SocketException {
 		udpSocket = new DatagramSocket();
 		vpnService.protect(udpSocket);
 		port = udpSocket.getLocalPort();
@@ -106,7 +108,7 @@ public class UDPServer implements Runnable {
 					udpHeader.setTotalLength(8 + packet.getLength());
 
 					//LocalVpnService.Instance.sendUDPPacket(ipHeader, udpHeader);
-					LocalVpnServiceKT.Companion.getInstance().sendUDPPacket(ipHeader, udpHeader);
+					vpnService.sendUDPPacket(ipHeader, udpHeader);
 				}
 			}
 		} catch (SocketException e) {

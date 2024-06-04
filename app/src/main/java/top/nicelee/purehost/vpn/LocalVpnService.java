@@ -30,22 +30,16 @@ public class LocalVpnService {
     TCPServer tcpServer;
     UDPServer udpServer;
 
-    boolean isClosed = false;
-
     public void stopVPN() {
-        if (isClosed)
-            return;
 
         Log.d(TAG, "销毁程序调用中...");
 
         udpServer.stop();
         //tcpServer.stop();
-        isClosed = true;
     }
 
 
-    public void onCreate(VpnService vpnService) {
-        isClosed = false;
+    public void onCreate(LocalVpnServiceKT vpnService) {
 
         tcpServer = new TCPServer(vpnService, localIP);
         udpServer = new UDPServer(vpnService, localIP);
@@ -58,7 +52,7 @@ public class LocalVpnService {
     public void onTCPPacketReceived(FileOutputStream vpnOutput, TCPHeader m_TCPHeader, IPHeader ipHeader, int size) throws IOException {
         m_TCPHeader.m_Offset = ipHeader.getHeaderLength();
 
-        Log.d(TAG, "LocalVpnService: TCP消息:" + ipHeader.toString() + "tcp: " + m_TCPHeader.toString());
+        Log.d(TAG, "LocalVpnService: TCP消息:" + ipHeader + "tcp: " + m_TCPHeader);
         if (ipHeader.getDestinationIP() == CommonMethods.ipStringToInt(tcpServer.localIP)) {
             //来自TCP服务器
             NATSession session = NATSessionManager.getSession(m_TCPHeader.getDestinationPort());
@@ -165,7 +159,7 @@ public class LocalVpnService {
         }
     }
 
-    public void createDNSResponseToAQuery(byte[] rawData, DnsPacket dnsPacket, String ipAddr) {
+    private void createDNSResponseToAQuery(byte[] rawData, DnsPacket dnsPacket, String ipAddr) {
         Question question = dnsPacket.Questions[0];
 
         dnsPacket.Header.setResourceCount((short) 1);
@@ -181,7 +175,6 @@ public class LocalVpnService {
         rPointer.setIP(CommonMethods.ipStringToInt(ipAddr));
 
         dnsPacket.Size = 12 + question.Length() + 16;
-
     }
 
     public void sendUDPPacket(FileOutputStream vpnOutput, IPHeader ipHeader, UDPHeader udpHeader) {
