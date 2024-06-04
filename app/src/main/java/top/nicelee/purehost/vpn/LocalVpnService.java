@@ -23,7 +23,7 @@ import top.nicelee.purehost.vpn.ip.TCPHeader;
 import top.nicelee.purehost.vpn.ip.UDPHeader;
 import  top.nicelee.purehost.vpn.server.NATSessionManager;
 
-public class LocalVpnService extends VpnService implements Runnable {
+public class LocalVpnService extends VpnService {
 
     private static final String TAG = "LocalVpnService";
     
@@ -126,7 +126,32 @@ public class LocalVpnService extends VpnService implements Runnable {
         Instance = this;
         tcpServer = new TCPServer(localIP);
         udpServer = new UDPServer(localIP);
-        Thread th = new Thread(this);
+
+
+        Thread th = new Thread(() -> {
+            int size = 0;
+            try{
+                Log.d(TAG,"读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
+                while ((size = vpnInput.read(m_Packet)) >= 0 ){
+                    if (isClosed) {
+                        vpnInput.close();
+                        vpnOutput.close();
+                        throw new Exception("LocalServer stopped.");
+                    }
+                    if( size == 0){
+                        continue;
+                    }
+                    Log.d(TAG,"读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
+                    onIPPacketReceived(m_IPHeader, size);
+                }
+            }catch (Exception e){
+                //e.printStackTrace();
+                Log.d(TAG,"接收报文出现错误!!!!!!!!!!!!!!!!!!!!!!!!!");
+            }finally {
+                stopVPN();
+            }
+
+        });
         th.setName("VPN Service - Thread");
         th.start();
 
@@ -134,31 +159,6 @@ public class LocalVpnService extends VpnService implements Runnable {
         udpServer.start();
     }
 
-    @Override
-    public void run() {
-        int size = 0;
-        try{
-            Log.d(TAG,"读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
-            while ((size = vpnInput.read(m_Packet)) >= 0 ){
-                if (isClosed) {
-                    vpnInput.close();
-                    vpnOutput.close();
-                    throw new Exception("LocalServer stopped.");
-                }
-                if( size == 0){
-                    continue;
-                }
-                Log.d(TAG,"读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
-                onIPPacketReceived(m_IPHeader, size);
-            }
-        }catch (Exception e){
-            //e.printStackTrace();
-            Log.d(TAG,"接收报文出现错误!!!!!!!!!!!!!!!!!!!!!!!!!");
-        }finally {
-            stopVPN();
-        }
-
-    }
 
     void onIPPacketReceived(IPHeader ipHeader, int size) throws IOException {
         Log.d(TAG,"LocalVpnService: 收到IP报文"+ size +"!!!!!!!!!!!!!!!!!!!!!!!!!" + ipHeader.toString());
