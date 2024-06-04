@@ -14,7 +14,6 @@ import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import top.nicelee.purehost.vpn.LocalVpnService;
 
 public class TCPServer implements Runnable{
 	private static final String TAG = "TCPServer";

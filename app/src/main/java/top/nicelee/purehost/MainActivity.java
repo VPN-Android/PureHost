@@ -11,7 +11,7 @@ import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import top.nicelee.purehost.vpn.LocalVpnService;
+import top.nicelee.purehost.vpn.LocalVpnServiceKT;
 import top.nicelee.purehost.vpn.config.ConfigReader;
 
 public class MainActivity extends Activity {
@@ -118,7 +118,7 @@ public class MainActivity extends Activity {
     private void stopVPN(){
         //serviceIntent = new Intent(this, LocalVpnService.class);
         //stopService(serviceIntent);
-        LocalVpnService.Instance.stopVPN();
+        LocalVpnServiceKT.Companion.getInstance().stopVPN();
         btnStart.setEnabled(true);
         btnEnd.setEnabled(false);
         btnReadHost.setEnabled(true);
@@ -141,7 +141,7 @@ public class MainActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data)
     {
         super.onActivityResult(requestCode, resultCode, data);
-        serviceIntent = new Intent(this, LocalVpnService.class);
+        serviceIntent = new Intent(this, LocalVpnServiceKT.class);
         startService(serviceIntent);
         btnStart.setEnabled(false);
         btnEnd.setEnabled(true);

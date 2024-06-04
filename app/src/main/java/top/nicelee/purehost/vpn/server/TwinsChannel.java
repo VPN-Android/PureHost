@@ -8,7 +8,7 @@ import java.nio.channels.SocketChannel;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import top.nicelee.purehost.vpn.LocalVpnService;
+import top.nicelee.purehost.vpn.LocalVpnServiceKT;
 import top.nicelee.purehost.vpn.ip.CommonMethods;
 
 public class TwinsChannel {
@@ -32,7 +32,8 @@ public class TwinsChannel {
 		remoteSc = SocketChannel.open();
 		remoteSc.configureBlocking(false);
         //Log.d(TAG,"VpnService Socket Protect成功: "+ LocalVpnService.Instance.protect(remoteSc.socket()));
-        LocalVpnService.Instance.protect(remoteSc.socket());
+//        LocalVpnService.Instance.protect(remoteSc.socket());
+		LocalVpnServiceKT.Companion.getInstance().protect(remoteSc.socket());
 
 		Matcher matcher = patternURL.matcher(localSc.getRemoteAddress().toString());
 		matcher.find();

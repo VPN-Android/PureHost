@@ -16,6 +16,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:name=".App"
         android:theme="@style/AppTheme">
         <activity
             android:name=".MainActivity"
@@ -29,7 +30,7 @@
         </activity>
 
         <service
-            android:name=".vpn.LocalVpnService"
+            android:name=".vpn.LocalVpnServiceKT"
             android:exported="false"
             android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>

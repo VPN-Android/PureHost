@@ -23,11 +23,11 @@ import top.nicelee.purehost.vpn.server.NATSessionManager;
 import top.nicelee.purehost.vpn.server.TCPServer;
 import top.nicelee.purehost.vpn.server.UDPServer;
 
-public class LocalVpnService extends VpnService {
+public class LocalVpnService {
 
     private static final String TAG = "LocalVpnService";
 
-    public static LocalVpnService Instance;
+//    public static LocalVpnService Instance;
     ParcelFileDescriptor fileDescriptor;
     FileInputStream vpnInput;
     FileOutputStream vpnOutput;
@@ -64,19 +64,11 @@ public class LocalVpnService extends VpnService {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        stopSelf();
         isClosed = true;
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        //stopVPN();
-    }
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
+    public void onCreate(VpnService vpnService) {
         isClosed = false;
 
         m_IPHeader = new IPHeader(m_Packet, 0);
@@ -85,12 +77,12 @@ public class LocalVpnService extends VpnService {
         m_DNSBuffer = ((ByteBuffer) ByteBuffer.wrap(m_Packet).position(28)).slice();
 
 
-        fileDescriptor = ParcelFileDescriptorHelper.INSTANCE.establish(this, localIP);
+        fileDescriptor = ParcelFileDescriptorHelper.INSTANCE.establish(vpnService, localIP);
 
         vpnInput = new FileInputStream(fileDescriptor.getFileDescriptor());
         vpnOutput = new FileOutputStream(fileDescriptor.getFileDescriptor());
 
-        Instance = this;
+//        Instance = this;
         tcpServer = new TCPServer(localIP);
         udpServer = new UDPServer(localIP);
 
@@ -143,7 +135,7 @@ public class LocalVpnService extends VpnService {
                 CommonMethods.ComputeTCPChecksum(ipHeader, tcpHeader);
                 vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
             } else {
-                System.out.printf("NoSession: %s %s\n", ipHeader.toString(), tcpHeader.toString());
+                Log.d(TAG,"NoSession:" + ipHeader + ", " + tcpHeader);
             }
         } else {
             //来自本地
@@ -186,14 +178,14 @@ public class LocalVpnService extends VpnService {
 
                 boolean isNeedPollution = false;
                 Question question = dnsPacket.Questions[0];
-                System.out.printf("DNS 查询的地址是%s \r\n", question.Domain);
+                Log.d(TAG,"DNS 查询的地址是:" + question.Domain);
                 String ipAddr = ConfigReader.domainIpMap.get(question.Domain);
                 if (ipAddr != null) {
                     isNeedPollution = true;
                 } else {
                     Matcher matcher = ConfigReader.patternRootDomain.matcher(question.Domain);
                     if (matcher.find()) {
-                        System.out.printf("DNS 查询的地址根目录是%s \r\n", matcher.group(1));
+                        Log.d(TAG,"DNS 查询的地址根目录是: " +  matcher.group(1));
                         ipAddr = ConfigReader.rootDomainIpMap.get(matcher.group(1));
                         if (ipAddr != null) {
                             isNeedPollution = true;

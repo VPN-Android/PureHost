@@ -9,7 +9,7 @@ import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import top.nicelee.purehost.vpn.LocalVpnService;
+import top.nicelee.purehost.vpn.LocalVpnServiceKT;
 import top.nicelee.purehost.vpn.config.ConfigReader;
 import top.nicelee.purehost.vpn.dns.DnsPacket;
 import top.nicelee.purehost.vpn.dns.Question;
@@ -58,7 +58,8 @@ public class UDPServer implements Runnable {
 	
 	public void init() throws UnknownHostException, SocketException {
 		udpSocket = new DatagramSocket();
-		LocalVpnService.Instance.protect(udpSocket);
+//		LocalVpnService.Instance.protect(udpSocket);
+		LocalVpnServiceKT.Companion.getInstance().protect(udpSocket);
 		port = udpSocket.getLocalPort();
 		packet = new DatagramPacket(receMsgs, 28 , receMsgs.length - 28);
 	}
@@ -111,7 +112,8 @@ public class UDPServer implements Runnable {
 					udpHeader.setSourcePort(session.RemotePort);
 					udpHeader.setTotalLength(8 + packet.getLength());
 
-					LocalVpnService.Instance.sendUDPPacket(ipHeader, udpHeader);
+					//LocalVpnService.Instance.sendUDPPacket(ipHeader, udpHeader);
+					LocalVpnServiceKT.Companion.getInstance().sendUDPPacket(ipHeader, udpHeader);
 				}
 			}
 		} catch (SocketException e) {
