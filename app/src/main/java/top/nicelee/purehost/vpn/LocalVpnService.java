@@ -14,19 +14,19 @@ import top.nicelee.purehost.vpn.config.ConfigReader;
 import top.nicelee.purehost.vpn.dns.DnsPacket;
 import top.nicelee.purehost.vpn.dns.Question;
 import top.nicelee.purehost.vpn.dns.ResourcePointer;
-import top.nicelee.purehost.vpn.server.NATSession;
-import top.nicelee.purehost.vpn.server.TCPServer;
-import top.nicelee.purehost.vpn.server.UDPServer;
 import top.nicelee.purehost.vpn.ip.CommonMethods;
 import top.nicelee.purehost.vpn.ip.IPHeader;
 import top.nicelee.purehost.vpn.ip.TCPHeader;
 import top.nicelee.purehost.vpn.ip.UDPHeader;
-import  top.nicelee.purehost.vpn.server.NATSessionManager;
+import top.nicelee.purehost.vpn.server.NATSession;
+import top.nicelee.purehost.vpn.server.NATSessionManager;
+import top.nicelee.purehost.vpn.server.TCPServer;
+import top.nicelee.purehost.vpn.server.UDPServer;
 
 public class LocalVpnService extends VpnService {
 
     private static final String TAG = "LocalVpnService";
-    
+
     public static LocalVpnService Instance;
     ParcelFileDescriptor fileDescriptor;
     FileInputStream vpnInput;
@@ -47,33 +47,35 @@ public class LocalVpnService extends VpnService {
     UDPServer udpServer;
 
     boolean isClosed = false;
-    public void stopVPN(){
-        if(isClosed)
+
+    public void stopVPN() {
+        if (isClosed)
             return;
 
         Log.d(TAG, "销毁程序调用中...");
 
         udpServer.stop();
         //tcpServer.stop();
-        try{
+        try {
             vpnInput.close();
             vpnOutput.close();
             fileDescriptor.close();
             fileDescriptor = null;
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         stopSelf();
-        isClosed= true;
+        isClosed = true;
     }
+
     @Override
-    public void onDestroy(){
+    public void onDestroy() {
         super.onDestroy();
         //stopVPN();
     }
+
     @Override
-    public void onCreate()
-    {
+    public void onCreate() {
         super.onCreate();
         isClosed = false;
 
@@ -95,24 +97,24 @@ public class LocalVpnService extends VpnService {
 
         Thread th = new Thread(() -> {
             int size = 0;
-            try{
-                Log.d(TAG,"读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
-                while ((size = vpnInput.read(m_Packet)) >= 0 ){
+            try {
+                Log.d(TAG, "读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
+                while ((size = vpnInput.read(m_Packet)) >= 0) {
                     if (isClosed) {
                         vpnInput.close();
                         vpnOutput.close();
                         throw new Exception("LocalServer stopped.");
                     }
-                    if( size == 0){
+                    if (size == 0) {
                         continue;
                     }
-                    Log.d(TAG,"读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
+                    Log.d(TAG, "读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
                     onIPPacketReceived(m_IPHeader, size);
                 }
-            }catch (Exception e){
+            } catch (Exception e) {
                 //e.printStackTrace();
-                Log.d(TAG,"接收报文出现错误!!!!!!!!!!!!!!!!!!!!!!!!!");
-            }finally {
+                Log.d(TAG, "接收报文出现错误!!!!!!!!!!!!!!!!!!!!!!!!!");
+            } finally {
                 stopVPN();
             }
 
@@ -125,126 +127,130 @@ public class LocalVpnService extends VpnService {
     }
 
 
-    void onIPPacketReceived(IPHeader ipHeader, int size) throws IOException {
-        Log.d(TAG,"LocalVpnService: 收到IP报文"+ size +"!!!!!!!!!!!!!!!!!!!!!!!!!" + ipHeader.toString());
-        switch (ipHeader.getProtocol()) {
-            case IPHeader.TCP:
-                TCPHeader tcpHeader = m_TCPHeader;
-                tcpHeader.m_Offset = ipHeader.getHeaderLength();
+    private void onTCPPacketReceived(IPHeader ipHeader, int size) throws IOException {
+        TCPHeader tcpHeader = m_TCPHeader;
+        tcpHeader.m_Offset = ipHeader.getHeaderLength();
 
-                Log.d(TAG,"LocalVpnService: TCP消息:"+ipHeader.toString() + "tcp: "+ tcpHeader.toString());
-                if (ipHeader.getDestinationIP() == CommonMethods.ipStringToInt(tcpServer.localIP)){
-                    //来自TCP服务器
-                    NATSession session = NATSessionManager.getSession(tcpHeader.getDestinationPort());
-                    if (session != null) {
-                        ipHeader.setSourceIP(session.RemoteIP);
-                        tcpHeader.setSourcePort(session.RemotePort);
-                        ipHeader.setDestinationIP(intLocalIP);
+        Log.d(TAG, "LocalVpnService: TCP消息:" + ipHeader.toString() + "tcp: " + tcpHeader.toString());
+        if (ipHeader.getDestinationIP() == CommonMethods.ipStringToInt(tcpServer.localIP)) {
+            //来自TCP服务器
+            NATSession session = NATSessionManager.getSession(tcpHeader.getDestinationPort());
+            if (session != null) {
+                ipHeader.setSourceIP(session.RemoteIP);
+                tcpHeader.setSourcePort(session.RemotePort);
+                ipHeader.setDestinationIP(intLocalIP);
 
-                        CommonMethods.ComputeTCPChecksum(ipHeader, tcpHeader);
-                        vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
-                    } else {
-                        System.out.printf("NoSession: %s %s\n", ipHeader.toString(), tcpHeader.toString());
-                    }
-                }else{
-                    //来自本地
-                    // 添加端口映射
-                    int portKey = tcpHeader.getSourcePort();
-                    NATSession session = NATSessionManager.getSession(portKey);
-                    if (session == null || session.RemoteIP != ipHeader.getDestinationIP() || session.RemotePort != tcpHeader.getDestinationPort()) {
-                        session = NATSessionManager.createSession(portKey, ipHeader.getDestinationIP(), tcpHeader.getDestinationPort());
-                        Log.d(TAG,"LocalVpnService Session: key Port: "+ portKey);
-                        Log.d(TAG,"LocalVpnService Session: ip : "+ CommonMethods.ipIntToString(ipHeader.getDestinationIP()));
-                        Log.d(TAG,"LocalVpnService Session: port : "+ (int)(tcpHeader.getDestinationPort()));
-                    }
-                    ipHeader.setSourceIP(CommonMethods.ipStringToInt(tcpServer.localIP));
-                    //tcpHeader.setSourcePort((short)13221);
-                    ipHeader.setDestinationIP(intLocalIP);
-                    tcpHeader.setDestinationPort((short)tcpServer.port);
-                    CommonMethods.ComputeTCPChecksum(ipHeader, tcpHeader);
-                    vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
-                }
-                break;
-            case IPHeader.UDP:
+                CommonMethods.ComputeTCPChecksum(ipHeader, tcpHeader);
+                vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
+            } else {
+                System.out.printf("NoSession: %s %s\n", ipHeader.toString(), tcpHeader.toString());
+            }
+        } else {
+            //来自本地
+            // 添加端口映射
+            int portKey = tcpHeader.getSourcePort();
+            NATSession session = NATSessionManager.getSession(portKey);
+            if (session == null || session.RemoteIP != ipHeader.getDestinationIP() || session.RemotePort != tcpHeader.getDestinationPort()) {
+                session = NATSessionManager.createSession(portKey, ipHeader.getDestinationIP(), tcpHeader.getDestinationPort());
+                Log.d(TAG, "LocalVpnService Session: key Port: " + portKey);
+                Log.d(TAG, "LocalVpnService Session: ip : " + CommonMethods.ipIntToString(ipHeader.getDestinationIP()));
+                Log.d(TAG, "LocalVpnService Session: port : " + (int) (tcpHeader.getDestinationPort()));
+            }
+            ipHeader.setSourceIP(CommonMethods.ipStringToInt(tcpServer.localIP));
+            //tcpHeader.setSourcePort((short)13221);
+            ipHeader.setDestinationIP(intLocalIP);
+            tcpHeader.setDestinationPort((short) tcpServer.port);
+            CommonMethods.ComputeTCPChecksum(ipHeader, tcpHeader);
+            vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
+        }
+    }
 
-                UDPHeader udpHeader = m_UDPHeader;
-                udpHeader.m_Offset = ipHeader.getHeaderLength();
-                int originIP = ipHeader.getSourceIP();
-                short originPort = udpHeader.getSourcePort();
-                int dstIP = ipHeader.getDestinationIP();
-                short dstPort = udpHeader.getDestinationPort() ;
+    private void onUDPPacketReceived(IPHeader ipHeader, int size) {
+        UDPHeader udpHeader = m_UDPHeader;
+        udpHeader.m_Offset = ipHeader.getHeaderLength();
+        int originIP = ipHeader.getSourceIP();
+        short originPort = udpHeader.getSourcePort();
+        int dstIP = ipHeader.getDestinationIP();
+        short dstPort = udpHeader.getDestinationPort();
 
-                Log.d(TAG,"LocalVpnService: 收到一个转发到UDPServer的包, 来源: " + udpHeader.getSourcePort() +", 目的端口:"+ ((int)udpHeader.getDestinationPort()) );
+        Log.d(TAG, "LocalVpnService: 收到一个转发到UDPServer的包, 来源: " + udpHeader.getSourcePort() + ", 目的端口:" + ((int) udpHeader.getDestinationPort()));
 
-                //本地报文, 转发给本地UDP服务器
-                //if (ipHeader.getSourceIP() == intLocalIP  && udpHeader.getSourcePort() != udpServer.port) {
-                if (ipHeader.getDestinationIP() != CommonMethods.ipStringToInt(udpServer.localIP)){
-                    {
+        //本地报文, 转发给本地UDP服务器
+        //if (ipHeader.getSourceIP() == intLocalIP  && udpHeader.getSourcePort() != udpServer.port) {
+        if (ipHeader.getDestinationIP() != CommonMethods.ipStringToInt(udpServer.localIP)) {
+            try {
+                m_DNSBuffer.clear();
+                m_DNSBuffer.limit(ipHeader.getDataLength() - 8);
+                DnsPacket dnsPacket = DnsPacket.FromBytes(m_DNSBuffer);
+                //Short dnsId = dnsPacket.Header.getID();
 
-                        try{
-                            m_DNSBuffer.clear();
-                            m_DNSBuffer.limit(ipHeader.getDataLength() - 8);
-                            DnsPacket dnsPacket = DnsPacket.FromBytes(m_DNSBuffer);
-                            //Short dnsId = dnsPacket.Header.getID();
-
-                            boolean isNeedPollution = false;
-                            Question question = dnsPacket.Questions[0];
-                            System.out.printf("DNS 查询的地址是%s \r\n", question.Domain);
-                            String ipAddr = ConfigReader.domainIpMap.get(question.Domain);
-                            if (ipAddr != null) {
-                                isNeedPollution = true;
-                            }else{
-                                Matcher matcher = ConfigReader.patternRootDomain.matcher(question.Domain);
-                                if(matcher.find()){
-                                    System.out.printf("DNS 查询的地址根目录是%s \r\n", matcher.group(1));
-                                    ipAddr = ConfigReader.rootDomainIpMap.get(matcher.group(1));
-                                    if (ipAddr != null){
-                                        isNeedPollution = true;
-                                    }
-                                }
-                            }
-                            if(isNeedPollution){
-                                createDNSResponseToAQuery(udpHeader.m_Data, dnsPacket, ipAddr);
-
-                                ipHeader.setTotalLength(20 + 8 + dnsPacket.Size);
-                                udpHeader.setTotalLength(8 + dnsPacket.Size);
-
-                                ipHeader.setSourceIP(dstIP);
-                                udpHeader.setSourcePort(dstPort);
-                                ipHeader.setDestinationIP(originIP);
-                                udpHeader.setDestinationPort(originPort);
-
-                                CommonMethods.ComputeUDPChecksum(ipHeader, udpHeader);
-                                vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
-                                break;
-                            }
-                        }catch (Exception e){
-                            Log.d(TAG,"当前udp包不是DNS报文");
+                boolean isNeedPollution = false;
+                Question question = dnsPacket.Questions[0];
+                System.out.printf("DNS 查询的地址是%s \r\n", question.Domain);
+                String ipAddr = ConfigReader.domainIpMap.get(question.Domain);
+                if (ipAddr != null) {
+                    isNeedPollution = true;
+                } else {
+                    Matcher matcher = ConfigReader.patternRootDomain.matcher(question.Domain);
+                    if (matcher.find()) {
+                        System.out.printf("DNS 查询的地址根目录是%s \r\n", matcher.group(1));
+                        ipAddr = ConfigReader.rootDomainIpMap.get(matcher.group(1));
+                        if (ipAddr != null) {
+                            isNeedPollution = true;
                         }
                     }
-                    if(NATSessionManager.getSession(originPort) == null){
+                }
+                if (isNeedPollution) {
+                    createDNSResponseToAQuery(udpHeader.m_Data, dnsPacket, ipAddr);
+
+                    ipHeader.setTotalLength(20 + 8 + dnsPacket.Size);
+                    udpHeader.setTotalLength(8 + dnsPacket.Size);
+
+                    ipHeader.setSourceIP(dstIP);
+                    udpHeader.setSourcePort(dstPort);
+                    ipHeader.setDestinationIP(originIP);
+                    udpHeader.setDestinationPort(originPort);
+
+                    CommonMethods.ComputeUDPChecksum(ipHeader, udpHeader);
+                    vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
+                } else {
+                    if (NATSessionManager.getSession(originPort) == null) {
                         NATSessionManager.createSession(originPort, dstIP, dstPort);
                     }
                     ipHeader.setSourceIP(CommonMethods.ipStringToInt("7.7.7.7"));
                     //udpHeader.setSourcePort(originPort);
                     ipHeader.setDestinationIP(intLocalIP);
-                    udpHeader.setDestinationPort((short)udpServer.port);
+                    udpHeader.setDestinationPort((short) udpServer.port);
 
                     ipHeader.setProtocol(IPHeader.UDP);
                     CommonMethods.ComputeUDPChecksum(ipHeader, udpHeader);
 
 
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
-                    Log.d(TAG,"LocalVpnService: 本地UDP信息转发给服务器:"+ipHeader.toString() + "udp端口" +udpServer.port + "session: "+ originPort);
-                }else{
-                    Log.d(TAG,"LocalVpnService: 其它UDP信息,不做处理:"+ipHeader.toString());
-                    Log.d(TAG,"LocalVpnService: 其它UDP信息,不做处理:"+udpHeader.toString());
-                    //vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
+                    Log.d(TAG, "LocalVpnService: 本地UDP信息转发给服务器:" + ipHeader + "udp端口" + udpServer.port + "session: " + originPort);
                 }
+            } catch (Exception e) {
+                Log.d(TAG, "当前udp包不是DNS报文");
+            }
+        } else {
+            Log.d(TAG, "LocalVpnService: 其它UDP信息,不做处理:" + ipHeader);
+            Log.d(TAG, "LocalVpnService: 其它UDP信息,不做处理:" + udpHeader);
+            //vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
+        }
+    }
+
+    void onIPPacketReceived(IPHeader ipHeader, int size) throws IOException {
+        Log.d(TAG, "LocalVpnService: 收到IP报文" + size + "!!!!!!!!!!!!!!!!!!!!!!!!!" + ipHeader.toString());
+        switch (ipHeader.getProtocol()) {
+            case IPHeader.TCP:
+                onTCPPacketReceived(ipHeader, size);
+                break;
+            case IPHeader.UDP:
+                onUDPPacketReceived(ipHeader, size);
                 break;
             default:
-                 //vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
-                 break;
+                //vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
+                break;
         }
     }
 
@@ -266,6 +272,7 @@ public class LocalVpnService extends VpnService {
         dnsPacket.Size = 12 + question.Length() + 16;
 
     }
+
     public void sendUDPPacket(IPHeader ipHeader, UDPHeader udpHeader) {
         try {
             CommonMethods.ComputeUDPChecksum(ipHeader, udpHeader);
