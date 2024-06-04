@@ -1,26 +1,20 @@
 package top.nicelee.purehost.vpn.server;
 
+import android.net.VpnService;
+import android.util.Log;
+
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import top.nicelee.purehost.vpn.LocalVpnServiceKT;
-import top.nicelee.purehost.vpn.config.ConfigReader;
-import top.nicelee.purehost.vpn.dns.DnsPacket;
-import top.nicelee.purehost.vpn.dns.Question;
-import top.nicelee.purehost.vpn.dns.ResourcePointer;
 import top.nicelee.purehost.vpn.ip.CommonMethods;
 import top.nicelee.purehost.vpn.ip.IPHeader;
 import top.nicelee.purehost.vpn.ip.UDPHeader;
-
-import static java.lang.Thread.sleep;
-
-import android.util.Log;
 
 
 public class UDPServer implements Runnable {
@@ -47,24 +41,23 @@ public class UDPServer implements Runnable {
 	public void stop(){
 		udpSocket.close();
 	}
-	public UDPServer(String localIP) {
+	public UDPServer(VpnService vpnService, String localIP) {
 		this.vpnLocalIP = localIP;
 		try {
-			init();
+			init(vpnService);
 		} catch (UnknownHostException | SocketException e) {
 			e.printStackTrace();
 		}
 	}
 	
-	public void init() throws UnknownHostException, SocketException {
+	public void init(VpnService vpnService) throws UnknownHostException, SocketException {
 		udpSocket = new DatagramSocket();
-//		LocalVpnService.Instance.protect(udpSocket);
-		LocalVpnServiceKT.Companion.getInstance().protect(udpSocket);
+		vpnService.protect(udpSocket);
 		port = udpSocket.getLocalPort();
 		packet = new DatagramPacket(receMsgs, 28 , receMsgs.length - 28);
 	}
 
-	public void service() {
+	private void service() {
 		Log.d(TAG,"UDPServer: UDP服务器启动, 端口为: " + port);
 		try {
 			while (true) {

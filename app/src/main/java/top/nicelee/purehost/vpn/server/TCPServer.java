@@ -1,11 +1,11 @@
 package top.nicelee.purehost.vpn.server;
 
+import android.net.VpnService;
 import android.util.Log;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -56,13 +56,16 @@ public class TCPServer implements Runnable{
 		}
 
 	}
-	public TCPServer(String localIP) {
+
+	private VpnService vpnService;
+	public TCPServer(VpnService vpnService, String localIP) {
+		this.vpnService = vpnService;
 		this.vpnLocalIP = localIP;
 
 	}
 
 	/* 服务器服务方法 */
-	public void service() throws Exception {
+	public void service(VpnService vpnService) throws Exception {
 		//
 		// NATSessionManager.createSession(9867,
 		// CommonMethods.ipStringToInt("192.168.1.103"), (short) 7777);
@@ -91,7 +94,7 @@ public class TCPServer implements Runnable{
 						sc.configureBlocking(false);
 
 						TwinsChannel twins = new TwinsChannel(sc, selector);
-						twins.connectRemoteSc();
+						twins.connectRemoteSc(vpnService);
 						sc.register(selector, SelectionKey.OP_READ, twins);// buffer通过附件方式，传递
 					}
 					if (key.isReadable()) {
@@ -182,7 +185,7 @@ public class TCPServer implements Runnable{
 	@Override
 	public void run() {
 		try {
-			service();
+			service(this.vpnService);
 		} catch (Exception e) {
 			//e.printStackTrace();
 		}

@@ -1,5 +1,7 @@
 package top.nicelee.purehost.vpn.server;
 
+import android.net.VpnService;
+
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
@@ -24,7 +26,7 @@ public class TwinsChannel {
 		this.selector = selector;
 	}
 	
-	SocketChannel connectRemoteSc() throws IOException {
+	SocketChannel connectRemoteSc(VpnService vpnService) throws IOException {
 		if (remoteSc != null) {
 			return remoteSc;
 		}
@@ -33,7 +35,7 @@ public class TwinsChannel {
 		remoteSc.configureBlocking(false);
         //Log.d(TAG,"VpnService Socket Protect成功: "+ LocalVpnService.Instance.protect(remoteSc.socket()));
 //        LocalVpnService.Instance.protect(remoteSc.socket());
-		LocalVpnServiceKT.Companion.getInstance().protect(remoteSc.socket());
+		vpnService.protect(remoteSc.socket());
 
 		Matcher matcher = patternURL.matcher(localSc.getRemoteAddress().toString());
 		matcher.find();

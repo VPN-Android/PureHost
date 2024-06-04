@@ -47,8 +47,8 @@ public class LocalVpnService {
     public void onCreate(VpnService vpnService) {
         isClosed = false;
 
-        tcpServer = new TCPServer(localIP);
-        udpServer = new UDPServer(localIP);
+        tcpServer = new TCPServer(vpnService, localIP);
+        udpServer = new UDPServer(vpnService, localIP);
 
         //tcpServer.start();
         udpServer.start();
