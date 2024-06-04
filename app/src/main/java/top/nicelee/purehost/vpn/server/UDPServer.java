@@ -20,8 +20,11 @@ import top.nicelee.purehost.vpn.ip.UDPHeader;
 
 import static java.lang.Thread.sleep;
 
+import android.util.Log;
+
 
 public class UDPServer implements Runnable {
+	private static final String TAG = "UDPServer";
 	public String localIP = "7.7.7.7";
 	public int port = 7777;
 	public String vpnLocalIP;
@@ -61,37 +64,37 @@ public class UDPServer implements Runnable {
 	}
 
 	public void service() {
-		System.out.println("UDPServer: UDP服务器启动, 端口为: " + port);
+		Log.d(TAG,"UDPServer: UDP服务器启动, 端口为: " + port);
 		try {
 			while (true) {
 				udpSocket.receive(packet);
 				
 				Matcher matcher = patternURL.matcher(packet.getSocketAddress().toString());
 				matcher.find();
-				//System.out.println("UDPServer: 收到udp消息" + packet.getSocketAddress().toString());
+				//Log.d(TAG,"UDPServer: 收到udp消息" + packet.getSocketAddress().toString());
 				if (localIP.equals(matcher.group(1))) {
 					
-					//System.out.println("UDPServer: UDPServer收到本地消息" + packet.getSocketAddress().toString());
+					//Log.d(TAG,"UDPServer: UDPServer收到本地消息" + packet.getSocketAddress().toString());
 					NATSession session = NATSessionManager.getSession((short)packet.getPort());
 					if( session == null) {
-						//System.out.println("UDPServer: NATSessionManager中未找到session" + packet.getPort());
+						//Log.d(TAG,"UDPServer: NATSessionManager中未找到session" + packet.getPort());
 						continue;
 					}
-					//System.out.println("UDPServer: NATSessionManager中找到session"+ packet.getPort());
+					//Log.d(TAG,"UDPServer: NATSessionManager中找到session"+ packet.getPort());
 					sendPacket = new DatagramPacket(receMsgs, 28, packet.getLength(), CommonMethods.ipIntToInet4Address(session.RemoteIP), (int)session.RemotePort);
 					udpSocket.send(sendPacket);
 				}else {
-					//System.out.println("UDPServer: UDPServer收到外部消息"+ packet.getSocketAddress().toString());
+					//Log.d(TAG,"UDPServer: UDPServer收到外部消息"+ packet.getSocketAddress().toString());
 					//如果消息来自外部, 转进来
 					NATSession session = new NATSession();
 					session.RemoteIP = CommonMethods.ipStringToInt(matcher.group(1));
 					session.RemotePort = (short) packet.getPort();
 					Short port = NATSessionManager.getPort(session);
 					if( port == null) {
-						//System.out.println("UDPServer: 收到外部UDP消息, 未在Session中找到");
+						//Log.d(TAG,"UDPServer: 收到外部UDP消息, 未在Session中找到");
 						continue;
 					}
-					//System.out.println("UDPServer: 收到外部UDP消息, 在Session中找到, port" + port +" ,port & 0xFF:" + (port & 0xFFFF));
+					//Log.d(TAG,"UDPServer: 收到外部UDP消息, 在Session中找到, port" + port +" ,port & 0xFF:" + (port & 0xFFFF));
 
 
 					IPHeader ipHeader = new IPHeader(receMsgs, 0);
@@ -122,7 +125,7 @@ public class UDPServer implements Runnable {
 			//ConfigReader.writeHost(e.toString());
 		} finally {
 			// 关闭socket
-			System.out.println("UDPServer: udpServer已关闭");
+			Log.d(TAG,"UDPServer: udpServer已关闭");
 			if (udpSocket != null) {
 				udpSocket.close();
 			}

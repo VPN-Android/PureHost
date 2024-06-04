@@ -1,5 +1,7 @@
 package top.nicelee.purehost.vpn.server;
 
+import android.util.Log;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
@@ -10,12 +12,14 @@ import java.net.Socket;
 
 public class A0_PrintTCPContentClient implements Runnable{
 
+	private static final String TAG = "A0_PrintTCPContentClient";
+
 	@Override
 	public void run() {
 		Socket socket = null;
 		try {
 		    Thread.sleep(4000);
-			System.out.println("开始连接... ");
+			Log.d(TAG,"开始连接... ");
 			socket=new Socket();
 			socket.bind(new InetSocketAddress(54333));
 			socket.connect(new InetSocketAddress("192.168.1.103", 7778));
@@ -24,7 +28,7 @@ public class A0_PrintTCPContentClient implements Runnable{
 			
 			BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-			System.out.println("发送请求... ");
+			Log.d(TAG,"发送请求... ");
 			
 //			writer.write("CONNECT wx3.sinaimg.cn:443 HTTP/1.1\r\n");
 //			writer.write("Proxy-Connection: keep-alive\r\n");
@@ -42,10 +46,10 @@ public class A0_PrintTCPContentClient implements Runnable{
 			writer.flush();
 			
 			
-			System.out.println("等待回复... ");
+			Log.d(TAG,"等待回复... ");
 			String data;
 			while( (data = reader.readLine() ) != null) {
-				System.out.println(data);
+				Log.d(TAG,data);
 			}
 			//writer.close();
 		} catch (Exception e) {

@@ -13,12 +13,12 @@ public class DnsPacket {
 
     public static DnsPacket FromBytes(ByteBuffer buffer) {
         if (buffer.limit() < 12){
-            //System.out.println("DNS size < 12");
+            //Log.d(TAG,"DNS size < 12");
             return null;
         }
 
         if (buffer.limit() > 512){
-            //System.out.println("DNS size > 512");
+            //Log.d(TAG,"DNS size > 512");
             return null;
         }
 
@@ -27,7 +27,7 @@ public class DnsPacket {
         packet.Header = DnsHeader.FromBytes(buffer);
 
         if (packet.Header.QuestionCount > 2 || packet.Header.ResourceCount > 50 || packet.Header.AResourceCount > 50 || packet.Header.EResourceCount > 50) {
-            //System.out.println("DNS sources too complicated");
+            //Log.d(TAG,"DNS sources too complicated");
             return null;
         }
 

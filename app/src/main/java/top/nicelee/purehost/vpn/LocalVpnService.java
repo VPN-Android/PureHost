@@ -2,6 +2,7 @@ package top.nicelee.purehost.vpn;
 
 import android.net.VpnService;
 import android.os.ParcelFileDescriptor;
+import android.util.Log;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -24,6 +25,8 @@ import  top.nicelee.purehost.vpn.server.NATSessionManager;
 
 public class LocalVpnService extends VpnService implements Runnable {
 
+    private static final String TAG = "LocalVpnService";
+    
     public static LocalVpnService Instance;
     ParcelFileDescriptor fileDescriptor;
     FileInputStream vpnInput;
@@ -48,7 +51,7 @@ public class LocalVpnService extends VpnService implements Runnable {
         if(isClosed)
             return;
 
-        System.out.println("销毁程序调用中...");
+        Log.d(TAG, "销毁程序调用中...");
 
         udpServer.stop();
         //tcpServer.stop();
@@ -87,9 +90,9 @@ public class LocalVpnService extends VpnService implements Runnable {
         //builder.addDnsServer("222.66.251.8");
         if(ConfigReader.dnsList.isEmpty()){
             ConfigReader.initDNS(this);
-            System.out.println("根据系统默认DNS初始化...");
+            Log.d(TAG,"根据系统默认DNS初始化...");
         }else{
-            System.out.println("根据提供的DNS初始化...");
+            Log.d(TAG,"根据提供的DNS初始化...");
         }
         for(String dns :ConfigReader.dnsList){
             builder.addDnsServer(dns);
@@ -97,19 +100,19 @@ public class LocalVpnService extends VpnService implements Runnable {
         }
         ConfigReader.dnsList.clear();
 //        try{
-//            System.out.println("\n\n\n\n\n\n\n创建Server!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n\n\n\n\n\n\n\n" + this.getPackageName());
+//            Log.d(TAG,"\n\n\n\n\n\n\n创建Server!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n\n\n\n\n\n\n\n" + this.getPackageName());
 //            //将本程序加入VPN列表
 //            builder.addAllowedApplication(this.getPackageName());
 //
 //            PackageManager packageManager= this.getPackageManager();
 //            List<PackageInfo> list=packageManager.getInstalledPackages(0);
 //            for(PackageInfo pkg :  list){
-//                System.out.println(pkg.packageName + "加入列表");
+//                Log.d(TAG,pkg.packageName + "加入列表");
 //                builder.addAllowedApplication(pkg.packageName);
 //            }
 //        }catch (Exception e){
 //            e.printStackTrace();
-//            System.out.println("\n\n\n\n\n\n\n创建Server出现错误!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n\n\n\n\n\n\n\n" + this.getPackageName());
+//            Log.d(TAG,"\n\n\n\n\n\n\n创建Server出现错误!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n\n\n\n\n\n\n\n" + this.getPackageName());
 //        }
 
         //builder.addDnsServer(...);
@@ -135,7 +138,7 @@ public class LocalVpnService extends VpnService implements Runnable {
     public void run() {
         int size = 0;
         try{
-            System.out.println("读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
+            Log.d(TAG,"读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
             while ((size = vpnInput.read(m_Packet)) >= 0 ){
                 if (isClosed) {
                     vpnInput.close();
@@ -145,12 +148,12 @@ public class LocalVpnService extends VpnService implements Runnable {
                 if( size == 0){
                     continue;
                 }
-                //System.out.println("读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
+                Log.d(TAG,"读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!");
                 onIPPacketReceived(m_IPHeader, size);
             }
         }catch (Exception e){
             //e.printStackTrace();
-            System.out.println("接收报文出现错误!!!!!!!!!!!!!!!!!!!!!!!!!");
+            Log.d(TAG,"接收报文出现错误!!!!!!!!!!!!!!!!!!!!!!!!!");
         }finally {
             stopVPN();
         }
@@ -158,13 +161,13 @@ public class LocalVpnService extends VpnService implements Runnable {
     }
 
     void onIPPacketReceived(IPHeader ipHeader, int size) throws IOException {
-        //System.out.println("LocalVpnService: 收到IP报文"+ size +"!!!!!!!!!!!!!!!!!!!!!!!!!" + ipHeader.toString());
+        Log.d(TAG,"LocalVpnService: 收到IP报文"+ size +"!!!!!!!!!!!!!!!!!!!!!!!!!" + ipHeader.toString());
         switch (ipHeader.getProtocol()) {
             case IPHeader.TCP:
                 TCPHeader tcpHeader = m_TCPHeader;
                 tcpHeader.m_Offset = ipHeader.getHeaderLength();
 
-                //System.out.println("LocalVpnService: TCP消息:"+ipHeader.toString() + "tcp: "+ tcpHeader.toString());
+                Log.d(TAG,"LocalVpnService: TCP消息:"+ipHeader.toString() + "tcp: "+ tcpHeader.toString());
                 if (ipHeader.getDestinationIP() == CommonMethods.ipStringToInt(tcpServer.localIP)){
                     //来自TCP服务器
                     NATSession session = NATSessionManager.getSession(tcpHeader.getDestinationPort());
@@ -185,9 +188,9 @@ public class LocalVpnService extends VpnService implements Runnable {
                     NATSession session = NATSessionManager.getSession(portKey);
                     if (session == null || session.RemoteIP != ipHeader.getDestinationIP() || session.RemotePort != tcpHeader.getDestinationPort()) {
                         session = NATSessionManager.createSession(portKey, ipHeader.getDestinationIP(), tcpHeader.getDestinationPort());
-                        //System.out.println("LocalVpnService Session: key Port: "+ portKey);
-                        //System.out.println("LocalVpnService Session: ip : "+ CommonMethods.ipIntToString(ipHeader.getDestinationIP()));
-                        //System.out.println("LocalVpnService Session: port : "+ (int)(tcpHeader.getDestinationPort()));
+                        Log.d(TAG,"LocalVpnService Session: key Port: "+ portKey);
+                        Log.d(TAG,"LocalVpnService Session: ip : "+ CommonMethods.ipIntToString(ipHeader.getDestinationIP()));
+                        Log.d(TAG,"LocalVpnService Session: port : "+ (int)(tcpHeader.getDestinationPort()));
                     }
                     ipHeader.setSourceIP(CommonMethods.ipStringToInt(tcpServer.localIP));
                     //tcpHeader.setSourcePort((short)13221);
@@ -206,7 +209,7 @@ public class LocalVpnService extends VpnService implements Runnable {
                 int dstIP = ipHeader.getDestinationIP();
                 short dstPort = udpHeader.getDestinationPort() ;
 
-                //System.out.println("LocalVpnService: 收到一个转发到UDPServer的包, 来源: " + udpHeader.getSourcePort() +", 目的端口:"+ ((int)udpHeader.getDestinationPort()) );
+                Log.d(TAG,"LocalVpnService: 收到一个转发到UDPServer的包, 来源: " + udpHeader.getSourcePort() +", 目的端口:"+ ((int)udpHeader.getDestinationPort()) );
 
                 //本地报文, 转发给本地UDP服务器
                 //if (ipHeader.getSourceIP() == intLocalIP  && udpHeader.getSourcePort() != udpServer.port) {
@@ -221,14 +224,14 @@ public class LocalVpnService extends VpnService implements Runnable {
 
                             boolean isNeedPollution = false;
                             Question question = dnsPacket.Questions[0];
-                            //System.out.printf("DNS 查询的地址是%s \r\n", question.Domain);
+                            System.out.printf("DNS 查询的地址是%s \r\n", question.Domain);
                             String ipAddr = ConfigReader.domainIpMap.get(question.Domain);
                             if (ipAddr != null) {
                                 isNeedPollution = true;
                             }else{
                                 Matcher matcher = ConfigReader.patternRootDomain.matcher(question.Domain);
                                 if(matcher.find()){
-                                    //System.out.printf("DNS 查询的地址根目录是%s \r\n", matcher.group(1));
+                                    System.out.printf("DNS 查询的地址根目录是%s \r\n", matcher.group(1));
                                     ipAddr = ConfigReader.rootDomainIpMap.get(matcher.group(1));
                                     if (ipAddr != null){
                                         isNeedPollution = true;
@@ -251,7 +254,7 @@ public class LocalVpnService extends VpnService implements Runnable {
                                 break;
                             }
                         }catch (Exception e){
-                            System.out.println("当前udp包不是DNS报文");
+                            Log.d(TAG,"当前udp包不是DNS报文");
                         }
                     }
                     if(NATSessionManager.getSession(originPort) == null){
@@ -267,10 +270,10 @@ public class LocalVpnService extends VpnService implements Runnable {
 
 
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
-                    //System.out.println("LocalVpnService: 本地UDP信息转发给服务器:"+ipHeader.toString() + "udp端口" +udpServer.port + "session: "+ originPort);
+                    Log.d(TAG,"LocalVpnService: 本地UDP信息转发给服务器:"+ipHeader.toString() + "udp端口" +udpServer.port + "session: "+ originPort);
                 }else{
-                    System.out.println("LocalVpnService: 其它UDP信息,不做处理:"+ipHeader.toString());
-                    System.out.println("LocalVpnService: 其它UDP信息,不做处理:"+udpHeader.toString());
+                    Log.d(TAG,"LocalVpnService: 其它UDP信息,不做处理:"+ipHeader.toString());
+                    Log.d(TAG,"LocalVpnService: 其它UDP信息,不做处理:"+udpHeader.toString());
                     //vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
                 }
                 break;

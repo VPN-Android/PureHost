@@ -31,26 +31,26 @@ public class TwinsChannel {
 
 		remoteSc = SocketChannel.open();
 		remoteSc.configureBlocking(false);
-        //System.out.println("VpnService Socket Protect成功: "+ LocalVpnService.Instance.protect(remoteSc.socket()));
+        //Log.d(TAG,"VpnService Socket Protect成功: "+ LocalVpnService.Instance.protect(remoteSc.socket()));
         LocalVpnService.Instance.protect(remoteSc.socket());
 
 		Matcher matcher = patternURL.matcher(localSc.getRemoteAddress().toString());
 		matcher.find();
 		NATSession session = NATSessionManager.getSession((short)Integer.parseInt(matcher.group(2)));
-		//System.out.println("VpnService Socket Session: key Port: "+ (short)Integer.parseInt(matcher.group(2)));
+		//Log.d(TAG,"VpnService Socket Session: key Port: "+ (short)Integer.parseInt(matcher.group(2)));
 //		if(session != null){
 //
-//			System.out.println("VpnService Socket Session: ip : "+ CommonMethods.ipIntToString(session.RemoteIP));
-//			System.out.println("VpnService Socket Session: port : "+ (int)(session.RemotePort));
+//			Log.d(TAG,"VpnService Socket Session: ip : "+ CommonMethods.ipIntToString(session.RemoteIP));
+//			Log.d(TAG,"VpnService Socket Session: port : "+ (int)(session.RemotePort));
 //		}
-		//System.out.println("VpnService Socket RemoteIP:  192.168.1.103");
-		//System.out.println("VpnService Socket RemotePort:  7778");
+		//Log.d(TAG,"VpnService Socket RemoteIP:  192.168.1.103");
+		//Log.d(TAG,"VpnService Socket RemotePort:  7778");
 		//建立远程连接
 		InetSocketAddress soAddr = new InetSocketAddress(CommonMethods.ipIntToString(session.RemoteIP), (session.RemotePort));
-		//System.out.println("VpnService Socket 正在连接中... "+ soAddr.toString());
+		//Log.d(TAG,"VpnService Socket 正在连接中... "+ soAddr.toString());
 		remoteSc.connect(soAddr);
 		remoteSc.register(selector, SelectionKey.OP_READ, this);
-		//System.out.println("VpnService Socket 已经注册... "+ soAddr.toString());
+		//Log.d(TAG,"VpnService Socket 已经注册... "+ soAddr.toString());
 		return remoteSc;
 	}
 }

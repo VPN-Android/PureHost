@@ -5,6 +5,7 @@ import android.net.ConnectivityManager;
 import android.net.DhcpInfo;
 import android.net.NetworkInfo;
 import android.net.wifi.WifiManager;
+import android.util.Log;
 import android.widget.EditText;
 import android.widget.TextView;
 
@@ -27,6 +28,7 @@ import top.nicelee.purehost.MainActivity;
 
 
 public class ConfigReader {
+	private static final String TAG = "ConfigReader";
 	final static Pattern patternConfig = Pattern.compile("^[ ]*([0-9]+.[0-9]+.[0-9]+.[0-9]+) ([^ ]+.*$)");
 	final static Pattern patternDNS = Pattern.compile(":[ ]*\\[([0-9]+.[0-9]+.[0-9]+.[0-9]+)\\]");
 	final public static Pattern patternRootDomain = Pattern.compile("([^\\.]+\\.[^\\.]+)$");
@@ -43,17 +45,17 @@ public class ConfigReader {
 		int netSubtype = info.getSubtype();
 
 		if (netType == ConnectivityManager.TYPE_WIFI) {  //WIFI
-			System.out.println("当前通过Wifi 上网");
+			Log.d(TAG,"当前通过Wifi 上网");
 			getWifiNetInfo(context);
 		} else if (netType == ConnectivityManager.TYPE_MOBILE) {   //MOBILE
-			System.out.println("当前通过流量 上网");
+			Log.d(TAG,"当前通过流量 上网");
 			getLocalDNS();
 		}
 		if(dnsList.isEmpty()){
 			dnsList.add("114.114.114.114");
 		}
 		for(String dns : dnsList){
-			System.out.println("DNS 服务器: " + dns);
+			Log.d(TAG,"DNS 服务器: " + dns);
 		}
 		return dnsList;
 
@@ -109,7 +111,7 @@ public class ConfigReader {
 		try {
 			File folder = new File(MainActivity.path);
 			File file = new File(folder, "host");
-			//System.out.println(MainActivity.path);
+			//Log.d(TAG,MainActivity.path);
 			buWriter = new BufferedWriter(new FileWriter(file, false));
 			buWriter.write(textHost.getText().toString());
 			buWriter.flush();
@@ -128,7 +130,7 @@ public class ConfigReader {
 		try {
 			File folder = new File(MainActivity.path);
 			File file = new File(folder, "host");
-			//System.out.println(MainActivity.path);
+			//Log.d(TAG,MainActivity.path);
 			buWriter = new BufferedWriter(new FileWriter(file, false));
 			buWriter.write(str);
 			buWriter.flush();
@@ -147,7 +149,7 @@ public class ConfigReader {
 		try {
 			File folder = new File(MainActivity.path);
 			File file = new File(folder, "host");
-			//System.out.println(MainActivity.path);
+			//Log.d(TAG,MainActivity.path);
 			buWriter = new BufferedWriter(new FileWriter(file, false));
 			buWriter.write("#127.0.0.1 localhost\r\n");
 			buWriter.write("47.105.98.249 nicelee.top\r\n");
@@ -164,7 +166,7 @@ public class ConfigReader {
 	public static void readHost(EditText textHost) {
 		// 先初始化默认值
 		BufferedReader buReader = null;
-		System.out.println("----Config init begin...----");
+		Log.d(TAG,"----Config init begin...----");
 		try {
 			File folder = new File(MainActivity.path);
 			File file = new File(folder, "host");
@@ -174,7 +176,7 @@ public class ConfigReader {
 			while ((config = buReader.readLine()) != null) {
 				textHost.append(config);
 				textHost.append("\r\n");
-				//System.out.println(config);
+				//Log.d(TAG,config);
 				Matcher matcher = patternConfig.matcher(config);
 				if (matcher.find()) {
 					//System.setProperty(matcher.group(1), matcher.group(2).trim());
@@ -196,6 +198,6 @@ public class ConfigReader {
 			} catch (Exception e) {
 			}
 		}
-		System.out.println("----Config ini end...----");
+		Log.d(TAG,"----Config ini end...----");
 	}
 }
