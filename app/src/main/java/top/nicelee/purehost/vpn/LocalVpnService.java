@@ -82,44 +82,9 @@ public class LocalVpnService extends VpnService {
         m_UDPHeader = new UDPHeader(m_Packet, 20);
         m_DNSBuffer = ((ByteBuffer) ByteBuffer.wrap(m_Packet).position(28)).slice();
 
-        Builder builder = new Builder();
-        //builder.setMtu(...);
-        builder.addAddress(localIP, 24);
-        //builder.addRoute("0.0.0.0", 0);
-        builder.setSession("PureHost");
-        //builder.addDnsServer("222.66.251.8");
-        if(ConfigReader.dnsList.isEmpty()){
-            ConfigReader.initDNS(this);
-            Log.d(TAG,"根据系统默认DNS初始化...");
-        }else{
-            Log.d(TAG,"根据提供的DNS初始化...");
-        }
-        for(String dns :ConfigReader.dnsList){
-            builder.addDnsServer(dns);
-            builder.addRoute(dns, 32);
-        }
-        ConfigReader.dnsList.clear();
-//        try{
-//            Log.d(TAG,"\n\n\n\n\n\n\n创建Server!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n\n\n\n\n\n\n\n" + this.getPackageName());
-//            //将本程序加入VPN列表
-//            builder.addAllowedApplication(this.getPackageName());
-//
-//            PackageManager packageManager= this.getPackageManager();
-//            List<PackageInfo> list=packageManager.getInstalledPackages(0);
-//            for(PackageInfo pkg :  list){
-//                Log.d(TAG,pkg.packageName + "加入列表");
-//                builder.addAllowedApplication(pkg.packageName);
-//            }
-//        }catch (Exception e){
-//            e.printStackTrace();
-//            Log.d(TAG,"\n\n\n\n\n\n\n创建Server出现错误!!!!!!!!!!!!!!!!!!!!!!!!!\n\n\n\n\n\n\n\n\n\n" + this.getPackageName());
-//        }
 
-        //builder.addDnsServer(...);
-        //builder.addSearchDomain(...);
-        //builder.setConfigureIntent(...);
+        fileDescriptor = ParcelFileDescriptorHelper.INSTANCE.establish(this, localIP);
 
-        fileDescriptor = builder.establish();
         vpnInput = new FileInputStream(fileDescriptor.getFileDescriptor());
         vpnOutput = new FileOutputStream(fileDescriptor.getFileDescriptor());
 
