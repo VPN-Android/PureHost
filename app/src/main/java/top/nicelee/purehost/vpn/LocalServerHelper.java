@@ -30,20 +30,6 @@ public class LocalServerHelper {
     TCPServer tcpServer;
     UDPServer udpServer;
 
-    private LocalVpnServiceKT vpnService;
-
-    public void stop() {
-
-        Log.d(TAG, "销毁程序调用中...");
-
-        if (tcpServer != null)
-            tcpServer.stop();
-
-        tcpServer = null;
-        udpServer = null;
-    }
-
-
     //方便解析
     private IPHeader m_IPHeader;
     private TCPHeader m_TCPHeader;
@@ -61,15 +47,30 @@ public class LocalServerHelper {
         m_DNSBuffer = ((ByteBuffer) ByteBuffer.wrap(buffer).position(28)).slice();
 
 
-        this.vpnService = vpnService;
-        tcpServer = new TCPServer(this.vpnService, localIP);
-        udpServer = new UDPServer(this.vpnService, localIP);
+        tcpServer = new TCPServer(vpnService, localIP);
+        udpServer = new UDPServer(vpnService, localIP);
         //tcpServer.start();
         udpServer.start();
     }
 
+    public void onPacketReceived(int size) {
+        switch (m_IPHeader.getProtocol()) {
+            case IPHeader.TCP:
+                try {
+                    onTCPPacketReceived(size);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                break;
+            case IPHeader.UDP:
+                onUDPPacketReceived(size);
+                break;
+            default:
+                Log.e(TAG, "LocalVpnService: 不支持的协议类型: " + m_IPHeader.getProtocol());
+        }
+    }
 
-    public void onTCPPacketReceived(int size) throws IOException {
+    private void onTCPPacketReceived(int size) throws IOException {
         if (tcpServer == null) {
             return;
         }
@@ -115,7 +116,7 @@ public class LocalServerHelper {
         }
     }
 
-    public void onUDPPacketReceived(int size) {
+    private void onUDPPacketReceived(int size) {
         if (udpServer == null) {
             return;
         }
@@ -194,6 +195,26 @@ public class LocalServerHelper {
             Log.d(TAG, "LocalVpnService: 其它UDP信息,不做处理:" + ipHeader);
             Log.d(TAG, "LocalVpnService: 其它UDP信息,不做处理:" + m_UDPHeader);
             //vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
+        }
+    }
+
+    public void stop() {
+
+        Log.d(TAG, "销毁程序调用中...");
+
+        if (tcpServer != null) {
+            tcpServer.stop();
+        }
+
+        tcpServer = null;
+        udpServer = null;
+
+        if (vpnOutput != null) {
+            try {
+                vpnOutput.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

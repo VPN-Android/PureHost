@@ -14,7 +14,7 @@ class App : Application() {
             androidContext(this@App)
             modules(module {
                 single { VpnDataSource() }
-                single { VpnViewModel(get(), get()) }
+                single { VpnViewModel(get()) }
             })
         }
     }
