@@ -56,21 +56,17 @@ public class LocalServerHelper {
     public void onPacketReceived(int size) {
         switch (m_IPHeader.getProtocol()) {
             case IPHeader.TCP:
-                try {
-                    onTCPPacketReceived(size);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
+                onTCPPacketReceived(size);
                 break;
             case IPHeader.UDP:
                 onUDPPacketReceived(size);
                 break;
             default:
-                Log.e(TAG, "LocalVpnService: 不支持的协议类型: " + m_IPHeader.getProtocol());
+                //Log.e(TAG, "LocalVpnService: 不支持的协议类型: " + m_IPHeader.getProtocol());
         }
     }
 
-    private void onTCPPacketReceived(int size) throws IOException {
+    private void onTCPPacketReceived(int size) {
         if (tcpServer == null) {
             return;
         }
@@ -92,7 +88,11 @@ public class LocalServerHelper {
                 ipHeader.setDestinationIP(intLocalIP);
 
                 CommonMethods.ComputeTCPChecksum(ipHeader, m_TCPHeader);
-                vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
+                try {
+                    vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
+                } catch (IOException e) {
+                    Log.e(TAG, "LocalVpnService: 发送TCP数据包失败:" + e);
+                }
             } else {
                 Log.d(TAG, "NoSession:" + ipHeader + ", " + m_TCPHeader);
             }
@@ -112,7 +112,11 @@ public class LocalServerHelper {
             ipHeader.setDestinationIP(intLocalIP);
             m_TCPHeader.setDestinationPort((short) tcpServer.port);
             CommonMethods.ComputeTCPChecksum(ipHeader, m_TCPHeader);
-            vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
+            try {
+                vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
+            } catch (IOException e) {
+                Log.e(TAG, "LocalVpnService: 发送TCP数据包失败:" + e);
+            }
         }
     }
 

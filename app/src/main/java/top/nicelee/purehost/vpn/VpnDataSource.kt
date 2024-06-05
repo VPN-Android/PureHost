@@ -1,14 +1,12 @@
 package top.nicelee.purehost.vpn
 
-import android.net.VpnService
 import android.os.ParcelFileDescriptor
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.withContext
+import top.nicelee.purehost.vpn.ip.IPHeader
+import top.nicelee.purehost.vpn.ip.UDPHeader
 import java.io.FileInputStream
-import java.io.FileOutputStream
 import java.lang.Thread.sleep
 
 class VpnDataSource {
@@ -16,47 +14,49 @@ class VpnDataSource {
     
 
     private var fileDescriptor: ParcelFileDescriptor? = null
-    private var vpnInput: FileInputStream? = null
 
     private var started = false
+    private val localServerHelper = LocalServerHelper()
 
-    suspend fun establishVpn(vpnService: VpnService, localIP: String): ParcelFileDescriptor? {
+    suspend fun establishVpn(vpnService: LocalVpnServiceKT, localIP: String) :ParcelFileDescriptor? {
         return withContext(Dispatchers.IO) {
             fileDescriptor = ParcelFileDescriptorHelper.establish(vpnService, localIP)
             fileDescriptor
         }
     }
 
-    suspend fun startProcessVpnPacket(byteArray: ByteArray) = callbackFlow {
-        withContext(Dispatchers.IO) {
-            started = true
+    suspend fun startProcessVpnPacket(vpnService: LocalVpnServiceKT, byteArray: ByteArray) {
+        started = true
 
+        withContext(Dispatchers.IO) {
             fileDescriptor?.use {
 
-                vpnInput = FileInputStream(it.fileDescriptor)
-                vpnInput?.use { vi->
+                localServerHelper.createServer(vpnService, fileDescriptor, byteArray)
+
+                FileInputStream(it.fileDescriptor).use {vpnInput->
                     Log.d(TAG, "开始!!!!!!!!!!!!!!!!!!!!!!!!!")
                     runCatching {
-                        var size = 0
-                        while (started && ((vi.read(byteArray).also { read -> size = read }) >= 0)) {
+                        while (started) {
+                            val size = vpnInput.read(byteArray)
                             if (size > 0) {
-                                trySend(size)
                                 Log.d(TAG, "读取报文中, size: $size")
+                                localServerHelper.onPacketReceived(size)
+                            } else {
+                                sleep(10)
                             }
                         }
-                        channel.close()
                     }
                 }
             }
         }
-
-        awaitClose {
-            kotlin.runCatching { vpnInput?.close() }
-            kotlin.runCatching { fileDescriptor?.close() }
-        }
     }
 
     fun stopProcessVpnPacket() {
+        localServerHelper.stop()
         started = false
+    }
+
+    fun sendUDPPacket(ipHeader: IPHeader, udpHeader: UDPHeader) {
+        localServerHelper.sendUDPPacket(ipHeader, udpHeader)
     }
 }

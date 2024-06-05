@@ -22,24 +22,19 @@ class VpnViewModel(private val source: VpnDataSource) : ViewModel() {
     )
     val vpnSwitchFlow: SharedFlow<Boolean> = _vpnSwitchFlow
 
-    private val localServerHelper = LocalServerHelper()
 
     //收到的IP报文Buffer
     private val packetBuffer = ByteArray(1024 * 64)
 
     suspend fun startProcessVpnPacket(vpnService: LocalVpnServiceKT, localIP: String) {
 
-        source.establishVpn(vpnService, localIP)?.let { parcelFileDescriptor ->
-            this.localServerHelper.createServer(vpnService, parcelFileDescriptor, packetBuffer)
+        source.establishVpn(vpnService, localIP)?.let {
 
             tryEmitStatus(true)
 
-            source.startProcessVpnPacket(packetBuffer).collect {
-                if (it > 0) {
-                    localServerHelper.onPacketReceived(it)
-                }
-            }
-        } ?: run {
+            source.startProcessVpnPacket(vpnService, packetBuffer)
+
+        } ?: kotlin.run {
             tryEmitStatus(false)
         }
     }
@@ -50,8 +45,6 @@ class VpnViewModel(private val source: VpnDataSource) : ViewModel() {
     }
 
     fun stopVPN() {
-        this.localServerHelper.stop()
-
         source.stopProcessVpnPacket()
         _vpnStatusFlow.tryEmit(0)
         val result = _vpnSwitchFlow.tryEmit(false)
@@ -59,7 +52,7 @@ class VpnViewModel(private val source: VpnDataSource) : ViewModel() {
     }
 
     fun sendUDPPacket(ipHeader: IPHeader, udpHeader: UDPHeader) {
-        this.localServerHelper.sendUDPPacket(ipHeader, udpHeader)
+        source.sendUDPPacket(ipHeader, udpHeader)
     }
 
 }
