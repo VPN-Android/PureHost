@@ -44,17 +44,24 @@ public class TCPServer implements Runnable{
 		tcpThread.start();
 	}
 
-	public void stop(){
-		tcpThread.interrupt();
-		try{
-			serverSocketChannel.socket().close();
-		}catch (Exception e){
-		}
-		try{
-			selector.close();
-		}catch (Exception e){
+	public void stop() {
+		if (tcpThread != null && tcpThread.isAlive()) {
+			tcpThread.interrupt();
 		}
 
+		try {
+			if (serverSocketChannel != null) {
+				serverSocketChannel.socket().close();
+				serverSocketChannel.close();
+			}
+		} catch (Exception e) {
+		}
+		try {
+			if (selector != null) {
+				selector.close();
+			}
+		} catch (Exception e) {
+		}
 	}
 
 	private VpnService vpnService;

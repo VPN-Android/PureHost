@@ -11,36 +11,45 @@ import top.nicelee.purehost.vpn.ip.UDPHeader
 class LocalVpnServiceKT : CoroutineService() {
 
     companion object {
-        val TAG = "LocalVpnServiceKT"
+        const val TAG = "LocalVpnServiceKT"
     }
 
     private val viewModel: VpnViewModel by lazy {
         KoinJavaComponent.get(VpnViewModel::class.java)
     }
 
-    private val localVpnService = LocalVpnService()
+    private val localServerHelper = LocalServerHelper()
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate")
 
-        localVpnService.onCreate(this)
+        localServerHelper.createServer(this)
 
         serviceScope.launch {
-            viewModel.startProcessVpnPacket(localVpnService, this@LocalVpnServiceKT, localVpnService.localIP)
-            viewModel.startVPN()
+            viewModel.vpnStatusFlow.collectLatest {
+                Log.d(TAG, "vpnStatusFlow: $it")
+            }
         }
 
         serviceScope.launch {
-            viewModel.vpnStatusLiveData.collectLatest {
-                if (it == 0) {
-                    localVpnService.stopVPN()
+            viewModel.vpnSwitchFlow.collect {
+                Log.d(TAG, "vpnSwitchFlow: $it")
+                if (!it) {
+                    localServerHelper.stop()
                     stopSelf()
                 }
             }
         }
 
+        serviceScope.launch {
+            viewModel.startProcessVpnPacket(localServerHelper, this@LocalVpnServiceKT, localServerHelper.localIP)
+        }
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        Log.d(TAG, "onDestroy")
+    }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.d(TAG, "onStartCommand")
@@ -48,6 +57,6 @@ class LocalVpnServiceKT : CoroutineService() {
     }
 
     fun sendUDPPacket(ipHeader: IPHeader, udpHeader: UDPHeader) {
-        localVpnService.sendUDPPacket(viewModel.getSendOutput(), ipHeader, udpHeader)
+        localServerHelper.sendUDPPacket(viewModel.getSendOutput(), ipHeader, udpHeader)
     }
 }

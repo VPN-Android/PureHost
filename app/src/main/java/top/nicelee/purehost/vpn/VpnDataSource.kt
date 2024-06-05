@@ -45,13 +45,12 @@ class VpnDataSource {
                         while (started && ((vi.read(byteArray).also { read -> size = read }) >= 0)) {
                             if (size == 0) {
                                 sleep(10)
-                                Log.d(TAG, "读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!, empty")
                                 continue
                             }
                             if (started) {
                                 trySend(size)
                             }
-                            Log.d(TAG, "读取报文中!!!!!!!!!!!!!!!!!!!!!!!!!")
+                            Log.d(TAG, "读取报文中, size: $size")
                         }
                         channel.close()
                     }

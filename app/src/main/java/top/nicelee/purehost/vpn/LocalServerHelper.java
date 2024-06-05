@@ -1,6 +1,5 @@
 package top.nicelee.purehost.vpn;
 
-import android.net.VpnService;
 import android.util.Log;
 
 import java.io.FileOutputStream;
@@ -21,7 +20,7 @@ import top.nicelee.purehost.vpn.server.NATSessionManager;
 import top.nicelee.purehost.vpn.server.TCPServer;
 import top.nicelee.purehost.vpn.server.UDPServer;
 
-public class LocalVpnService {
+public class LocalServerHelper {
 
     private static final String TAG = "LocalVpnService";
 
@@ -30,26 +29,32 @@ public class LocalVpnService {
     TCPServer tcpServer;
     UDPServer udpServer;
 
-    public void stopVPN() {
+    public void stop() {
 
         Log.d(TAG, "销毁程序调用中...");
 
-        udpServer.stop();
-        //tcpServer.stop();
+        if (tcpServer != null)
+            tcpServer.stop();
+
+        tcpServer = null;
+        udpServer = null;
     }
 
 
-    public void onCreate(LocalVpnServiceKT vpnService) {
+    public void createServer(LocalVpnServiceKT vpnService) {
 
         tcpServer = new TCPServer(vpnService, localIP);
         udpServer = new UDPServer(vpnService, localIP);
-
         //tcpServer.start();
         udpServer.start();
     }
 
 
     public void onTCPPacketReceived(FileOutputStream vpnOutput, TCPHeader m_TCPHeader, IPHeader ipHeader, int size) throws IOException {
+        if (tcpServer == null) {
+            return;
+        }
+
         m_TCPHeader.m_Offset = ipHeader.getHeaderLength();
 
         Log.d(TAG, "LocalVpnService: TCP消息:" + ipHeader + "tcp: " + m_TCPHeader);
@@ -87,6 +92,10 @@ public class LocalVpnService {
     }
 
     public void onUDPPacketReceived(FileOutputStream vpnOutput, UDPHeader m_UDPHeader, ByteBuffer m_DNSBuffer, IPHeader ipHeader, int size) {
+        if (udpServer == null) {
+            return;
+        }
+
         m_UDPHeader.m_Offset = ipHeader.getHeaderLength();
         int originIP = ipHeader.getSourceIP();
         short originPort = m_UDPHeader.getSourcePort();

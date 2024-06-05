@@ -41,6 +41,7 @@ public class UDPServer implements Runnable {
 
 	public void stop(){
 		udpSocket.close();
+		udpThread.interrupt();
 	}
 	public UDPServer(LocalVpnServiceKT vpnService, String localIP) {
 		this.vpnService = vpnService;

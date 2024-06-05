@@ -10,8 +10,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
-import androidx.lifecycle.ViewModel;
-
 import org.koin.java.KoinJavaComponent;
 
 import top.nicelee.purehost.vpn.LocalVpnServiceKT;
