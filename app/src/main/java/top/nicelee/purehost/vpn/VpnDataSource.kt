@@ -39,14 +39,10 @@ class VpnDataSource {
                     runCatching {
                         var size = 0
                         while (started && ((vi.read(byteArray).also { read -> size = read }) >= 0)) {
-                            if (size == 0) {
-                                sleep(10)
-                                continue
-                            }
-                            if (started) {
+                            if (size > 0) {
                                 trySend(size)
+                                Log.d(TAG, "读取报文中, size: $size")
                             }
-                            Log.d(TAG, "读取报文中, size: $size")
                         }
                         channel.close()
                     }

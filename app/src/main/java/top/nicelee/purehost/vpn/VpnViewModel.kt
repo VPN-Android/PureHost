@@ -32,7 +32,7 @@ class VpnViewModel(private val source: VpnDataSource) : ViewModel() {
         source.establishVpn(vpnService, localIP)?.let { parcelFileDescriptor ->
             this.localServerHelper.createServer(vpnService, parcelFileDescriptor, packetBuffer)
 
-            tryEmit(true)
+            tryEmitStatus(true)
 
             source.startProcessVpnPacket(packetBuffer).collect {
                 if (it > 0) {
@@ -40,11 +40,11 @@ class VpnViewModel(private val source: VpnDataSource) : ViewModel() {
                 }
             }
         } ?: run {
-            tryEmit(false)
+            tryEmitStatus(false)
         }
     }
 
-    private fun tryEmit(value: Boolean) {
+    private fun tryEmitStatus(value: Boolean) {
         _vpnSwitchFlow.tryEmit(value)
         _vpnStatusFlow.tryEmit(if (value) 1 else 0)
     }
