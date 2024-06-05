@@ -4,6 +4,7 @@ import android.util.Log;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
 
@@ -29,6 +30,8 @@ public class LocalServerHelper {
     TCPServer tcpServer;
     UDPServer udpServer;
 
+    private LocalVpnServiceKT vpnService;
+
     public void stop() {
 
         Log.d(TAG, "销毁程序调用中...");
@@ -41,19 +44,46 @@ public class LocalServerHelper {
     }
 
 
-    public void createServer(LocalVpnServiceKT vpnService) {
+    //方便解析
+//    private m_IPHeader: IPHeader by lazy {
+//        IPHeader(m_Packet, 0)
+//    }
+//    private val m_TCPHeader: TCPHeader by lazy {
+//        TCPHeader(m_Packet, 20)
+//    }
+//    private val m_UDPHeader: UDPHeader by lazy {
+//        UDPHeader(m_Packet, 20)
+//    }
+//    private val m_DNSBuffer: ByteBuffer by lazy {
+//        (ByteBuffer.wrap(m_Packet).position(28) as ByteBuffer).slice()
+//    }
 
-        tcpServer = new TCPServer(vpnService, localIP);
-        udpServer = new UDPServer(vpnService, localIP);
+    private IPHeader m_IPHeader;
+    private TCPHeader m_TCPHeader;
+    private UDPHeader m_UDPHeader;
+    private ByteBuffer m_DNSBuffer;
+
+    public void createServer(LocalVpnServiceKT vpnService, byte[] buffer) {
+        m_IPHeader = new IPHeader(buffer, 0);
+        m_TCPHeader = new TCPHeader(buffer, 20);
+        m_UDPHeader = new UDPHeader(buffer, 20);
+        m_DNSBuffer = ((ByteBuffer) ByteBuffer.wrap(buffer).position(28)).slice();
+
+        this.vpnService = vpnService;
+        tcpServer = new TCPServer(this.vpnService, localIP);
+        udpServer = new UDPServer(this.vpnService, localIP);
         //tcpServer.start();
         udpServer.start();
     }
 
 
-    public void onTCPPacketReceived(FileOutputStream vpnOutput, TCPHeader m_TCPHeader, IPHeader ipHeader, int size) throws IOException {
+    public void onTCPPacketReceived(FileOutputStream vpnOutput, int size) throws IOException {
         if (tcpServer == null) {
             return;
         }
+
+        TCPHeader m_TCPHeader = this.m_TCPHeader;
+        IPHeader ipHeader = this.m_IPHeader;
 
         m_TCPHeader.m_Offset = ipHeader.getHeaderLength();
 
@@ -91,12 +121,16 @@ public class LocalServerHelper {
         }
     }
 
-    public void onUDPPacketReceived(FileOutputStream vpnOutput, UDPHeader m_UDPHeader, ByteBuffer m_DNSBuffer, IPHeader ipHeader, int size) {
+    public void onUDPPacketReceived(FileOutputStream vpnOutput, int size) {
         if (udpServer == null) {
             return;
         }
 
-        m_UDPHeader.m_Offset = ipHeader.getHeaderLength();
+        UDPHeader m_UDPHeader = this.m_UDPHeader;
+        ByteBuffer m_DNSBuffer = this.m_DNSBuffer;
+        IPHeader ipHeader = this.m_IPHeader;
+
+                m_UDPHeader.m_Offset = ipHeader.getHeaderLength();
         int originIP = ipHeader.getSourceIP();
         short originPort = m_UDPHeader.getSourcePort();
         int dstIP = ipHeader.getDestinationIP();

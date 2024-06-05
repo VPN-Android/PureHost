@@ -18,12 +18,12 @@ class LocalVpnServiceKT : CoroutineService() {
         KoinJavaComponent.get(VpnViewModel::class.java)
     }
 
-    private val localServerHelper = LocalServerHelper()
+    private var localIP: String = "168.168.168.168"
+
     override fun onCreate() {
         super.onCreate()
         Log.d(TAG, "onCreate")
 
-        localServerHelper.createServer(this)
 
         serviceScope.launch {
             viewModel.vpnStatusFlow.collectLatest {
@@ -35,14 +35,13 @@ class LocalVpnServiceKT : CoroutineService() {
             viewModel.vpnSwitchFlow.collect {
                 Log.d(TAG, "vpnSwitchFlow: $it")
                 if (!it) {
-                    localServerHelper.stop()
                     stopSelf()
                 }
             }
         }
 
         serviceScope.launch {
-            viewModel.startProcessVpnPacket(localServerHelper, this@LocalVpnServiceKT, localServerHelper.localIP)
+            viewModel.startProcessVpnPacket(this@LocalVpnServiceKT, localIP)
         }
     }
 
@@ -57,6 +56,6 @@ class LocalVpnServiceKT : CoroutineService() {
     }
 
     fun sendUDPPacket(ipHeader: IPHeader, udpHeader: UDPHeader) {
-        localServerHelper.sendUDPPacket(viewModel.getSendOutput(), ipHeader, udpHeader)
+        viewModel.sendUDPPacket(ipHeader, udpHeader)
     }
 }
