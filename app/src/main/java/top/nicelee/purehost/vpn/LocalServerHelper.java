@@ -90,6 +90,7 @@ public class LocalServerHelper {
                 CommonMethods.ComputeTCPChecksum(ipHeader, m_TCPHeader);
                 try {
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
+                    vpnOutput.flush();
                 } catch (IOException e) {
                     Log.e(TAG, "LocalVpnService: 发送TCP数据包失败:" + e);
                 }
@@ -114,6 +115,7 @@ public class LocalServerHelper {
             CommonMethods.ComputeTCPChecksum(ipHeader, m_TCPHeader);
             try {
                 vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
+                vpnOutput.flush();
             } catch (IOException e) {
                 Log.e(TAG, "LocalVpnService: 发送TCP数据包失败:" + e);
             }
@@ -176,6 +178,7 @@ public class LocalServerHelper {
 
                     CommonMethods.ComputeUDPChecksum(ipHeader, m_UDPHeader);
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
+                    vpnOutput.flush();
                 } else {
                     if (NATSessionManager.getSession(originPort) == null) {
                         NATSessionManager.createSession(originPort, dstIP, dstPort);
@@ -190,6 +193,7 @@ public class LocalServerHelper {
 
 
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
+                    vpnOutput.flush();
                     Log.d(TAG, "LocalVpnService: 本地UDP信息转发给服务器:" + ipHeader + "udp端口" + udpServer.port + "session: " + originPort);
                 }
             } catch (Exception e) {
