@@ -28,16 +28,18 @@ class VpnViewModel(private val context: Context, private val source: VpnDataSour
         _vpnSwitchFlow.tryEmit(true)
         _vpnStatusFlow.tryEmit(1)
 
-        this.localServerHelper.createServer(vpnService, m_Packet)
+        val parcelFileDescriptor = source.establishVpn(vpnService, localIP)
 
-        source.startProcessVpnPacket(m_Packet, vpnService, localIP).collect {
+        this.localServerHelper.createServer(vpnService, parcelFileDescriptor, m_Packet)
+
+        source.startProcessVpnPacket(m_Packet).collect {
             if (it > 0) {
                 when (m_Packet[9]) { // IPHeader: m_Packet[m_Offset + offset_proto]
                     IPHeader.TCP -> {
-                        localServerHelper.onTCPPacketReceived(source.vpnOutput, it)
+                        localServerHelper.onTCPPacketReceived(it)
                     }
                     IPHeader.UDP -> {
-                        localServerHelper.onUDPPacketReceived(source.vpnOutput, it)
+                        localServerHelper.onUDPPacketReceived(it)
                     }
                 }
             }
@@ -54,7 +56,7 @@ class VpnViewModel(private val context: Context, private val source: VpnDataSour
     }
 
     fun sendUDPPacket(ipHeader: IPHeader, udpHeader: UDPHeader) {
-        this.localServerHelper.sendUDPPacket(source.vpnOutput, ipHeader, udpHeader)
+        this.localServerHelper.sendUDPPacket(ipHeader, udpHeader)
     }
 
 }

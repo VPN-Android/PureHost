@@ -18,24 +18,20 @@ class VpnDataSource {
     private var fileDescriptor: ParcelFileDescriptor? = null
     private var vpnInput: FileInputStream? = null
 
-    var vpnOutput: FileOutputStream? = null
-        private set
-        get() {
-            if (field == null) {
-                throw IllegalStateException("vpnOutput is null")
-            }
-            return field
-        }
-
     private var started = false
 
-    suspend fun startProcessVpnPacket(byteArray: ByteArray, vpnService: VpnService, localIP: String) = callbackFlow {
+    suspend fun establishVpn(vpnService: VpnService, localIP: String): ParcelFileDescriptor? {
+        return withContext(Dispatchers.IO) {
+            fileDescriptor = ParcelFileDescriptorHelper.establish(vpnService, localIP)
+            fileDescriptor
+        }
+    }
+
+    suspend fun startProcessVpnPacket(byteArray: ByteArray) = callbackFlow {
         withContext(Dispatchers.IO) {
             started = true
 
-            fileDescriptor = ParcelFileDescriptorHelper.establish(vpnService, localIP)
             fileDescriptor?.use {
-                vpnOutput = FileOutputStream(it.fileDescriptor)
 
                 vpnInput = FileInputStream(it.fileDescriptor)
                 vpnInput?.use { vi->
@@ -60,7 +56,6 @@ class VpnDataSource {
 
         awaitClose {
             kotlin.runCatching { vpnInput?.close() }
-            kotlin.runCatching { vpnOutput?.close() }
             kotlin.runCatching { fileDescriptor?.close() }
         }
     }

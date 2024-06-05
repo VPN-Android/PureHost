@@ -1,10 +1,10 @@
 package top.nicelee.purehost.vpn;
 
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.regex.Matcher;
 
@@ -45,29 +45,21 @@ public class LocalServerHelper {
 
 
     //方便解析
-//    private m_IPHeader: IPHeader by lazy {
-//        IPHeader(m_Packet, 0)
-//    }
-//    private val m_TCPHeader: TCPHeader by lazy {
-//        TCPHeader(m_Packet, 20)
-//    }
-//    private val m_UDPHeader: UDPHeader by lazy {
-//        UDPHeader(m_Packet, 20)
-//    }
-//    private val m_DNSBuffer: ByteBuffer by lazy {
-//        (ByteBuffer.wrap(m_Packet).position(28) as ByteBuffer).slice()
-//    }
-
     private IPHeader m_IPHeader;
     private TCPHeader m_TCPHeader;
     private UDPHeader m_UDPHeader;
     private ByteBuffer m_DNSBuffer;
+    private FileOutputStream vpnOutput;
 
-    public void createServer(LocalVpnServiceKT vpnService, byte[] buffer) {
+    public void createServer(LocalVpnServiceKT vpnService, ParcelFileDescriptor fileDescriptor, byte[] buffer) {
+
+        vpnOutput = new FileOutputStream(fileDescriptor.getFileDescriptor());
+
         m_IPHeader = new IPHeader(buffer, 0);
         m_TCPHeader = new TCPHeader(buffer, 20);
         m_UDPHeader = new UDPHeader(buffer, 20);
         m_DNSBuffer = ((ByteBuffer) ByteBuffer.wrap(buffer).position(28)).slice();
+
 
         this.vpnService = vpnService;
         tcpServer = new TCPServer(this.vpnService, localIP);
@@ -77,10 +69,12 @@ public class LocalServerHelper {
     }
 
 
-    public void onTCPPacketReceived(FileOutputStream vpnOutput, int size) throws IOException {
+    public void onTCPPacketReceived(int size) throws IOException {
         if (tcpServer == null) {
             return;
         }
+
+        FileOutputStream vpnOutput = this.vpnOutput;
 
         TCPHeader m_TCPHeader = this.m_TCPHeader;
         IPHeader ipHeader = this.m_IPHeader;
@@ -121,10 +115,11 @@ public class LocalServerHelper {
         }
     }
 
-    public void onUDPPacketReceived(FileOutputStream vpnOutput, int size) {
+    public void onUDPPacketReceived(int size) {
         if (udpServer == null) {
             return;
         }
+        FileOutputStream vpnOutput = this.vpnOutput;
 
         UDPHeader m_UDPHeader = this.m_UDPHeader;
         ByteBuffer m_DNSBuffer = this.m_DNSBuffer;
@@ -220,8 +215,9 @@ public class LocalServerHelper {
         dnsPacket.Size = 12 + question.Length() + 16;
     }
 
-    public void sendUDPPacket(FileOutputStream vpnOutput, IPHeader ipHeader, UDPHeader udpHeader) {
+    public void sendUDPPacket(IPHeader ipHeader, UDPHeader udpHeader) {
         try {
+            FileOutputStream vpnOutput = this.vpnOutput;
             CommonMethods.ComputeUDPChecksum(ipHeader, udpHeader);
             vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
         } catch (IOException e) {
