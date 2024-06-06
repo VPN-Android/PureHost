@@ -39,7 +39,7 @@ class VpnDataSource {
                         while (started) {
                             val size = vpnInput.read(byteArray)
                             if (size > 0) {
-                                Log.d(TAG, "读取报文中, size: $size")
+                                //Log.d(TAG, "读取报文中, size: $size")
                                 localServerHelper.onPacketReceived(size)
                             } else {
                                 sleep(10)

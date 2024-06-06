@@ -1,6 +1,5 @@
 package top.nicelee.purehost.vpn.server;
 
-import android.net.VpnService;
 import android.util.Log;
 
 import java.io.IOException;
@@ -19,7 +18,8 @@ import top.nicelee.purehost.vpn.ip.UDPHeader;
 
 public class UDPServer implements Runnable {
 	private static final String TAG = "UDPServer";
-	public String localIP = "7.7.7.7";
+	public static final String udpServerLocalIP = "7.7.7.7";
+	public static final int udpServerLocalIPInt = CommonMethods.ipStringToInt(udpServerLocalIP);
 	public int port = 7777;
 	public String vpnLocalIP;
 	private LocalVpnServiceKT vpnService;
@@ -43,9 +43,9 @@ public class UDPServer implements Runnable {
 		udpSocket.close();
 		udpThread.interrupt();
 	}
-	public UDPServer(LocalVpnServiceKT vpnService, String localIP) {
+	public UDPServer(LocalVpnServiceKT vpnService, String vpnLocalIP) {
 		this.vpnService = vpnService;
-		this.vpnLocalIP = localIP;
+		this.vpnLocalIP = vpnLocalIP;
 		try {
 			init(vpnService);
 		} catch (UnknownHostException | SocketException e) {
@@ -69,7 +69,7 @@ public class UDPServer implements Runnable {
 				Matcher matcher = patternURL.matcher(packet.getSocketAddress().toString());
 				matcher.find();
 				//Log.d(TAG,"UDPServer: 收到udp消息" + packet.getSocketAddress().toString());
-				if (localIP.equals(matcher.group(1))) {
+				if (udpServerLocalIP.equals(matcher.group(1))) {
 					
 					//Log.d(TAG,"UDPServer: UDPServer收到本地消息" + packet.getSocketAddress().toString());
 					NATSession session = NATSessionManager.getSession((short)packet.getPort());

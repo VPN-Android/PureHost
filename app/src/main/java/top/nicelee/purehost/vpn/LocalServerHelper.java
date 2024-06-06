@@ -25,8 +25,8 @@ public class LocalServerHelper {
 
     private static final String TAG = "LocalVpnService";
 
-    String localIP = "168.168.168.168";
-    int intLocalIP = CommonMethods.ipStringToInt(localIP);
+    String vpnLocalIP = "168.168.168.168";
+    int vpnLocalIPInt = CommonMethods.ipStringToInt(vpnLocalIP);
     TCPServer tcpServer;
     UDPServer udpServer;
 
@@ -47,8 +47,8 @@ public class LocalServerHelper {
         m_DNSBuffer = ((ByteBuffer) ByteBuffer.wrap(buffer).position(28)).slice();
 
 
-        tcpServer = new TCPServer(vpnService, localIP);
-        udpServer = new UDPServer(vpnService, localIP);
+        tcpServer = new TCPServer(vpnService, vpnLocalIP);
+        udpServer = new UDPServer(vpnService, vpnLocalIP);
         //tcpServer.start();
         udpServer.start();
     }
@@ -62,7 +62,7 @@ public class LocalServerHelper {
                 onUDPPacketReceived(size);
                 break;
             default:
-                //Log.e(TAG, "LocalVpnService: 不支持的协议类型: " + m_IPHeader.getProtocol());
+                //Log.e(TAG, "不支持的协议类型: " + m_IPHeader.getProtocol());
         }
     }
 
@@ -78,21 +78,21 @@ public class LocalServerHelper {
 
         m_TCPHeader.m_Offset = ipHeader.getHeaderLength();
 
-        Log.d(TAG, "LocalVpnService: TCP消息:" + ipHeader + "tcp: " + m_TCPHeader);
+        Log.d(TAG, "TCP消息:" + ipHeader + "tcp: " + m_TCPHeader);
         if (ipHeader.getDestinationIP() == CommonMethods.ipStringToInt(tcpServer.localIP)) {
             //来自TCP服务器
             NATSession session = NATSessionManager.getSession(m_TCPHeader.getDestinationPort());
             if (session != null) {
                 ipHeader.setSourceIP(session.RemoteIP);
                 m_TCPHeader.setSourcePort(session.RemotePort);
-                ipHeader.setDestinationIP(intLocalIP);
+                ipHeader.setDestinationIP(vpnLocalIPInt);
 
                 CommonMethods.ComputeTCPChecksum(ipHeader, m_TCPHeader);
                 try {
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
                     vpnOutput.flush();
                 } catch (IOException e) {
-                    Log.e(TAG, "LocalVpnService: 发送TCP数据包失败:" + e);
+                    Log.e(TAG, "发送TCP数据包失败:" + e);
                 }
             } else {
                 Log.d(TAG, "NoSession:" + ipHeader + ", " + m_TCPHeader);
@@ -110,14 +110,14 @@ public class LocalServerHelper {
             }
             ipHeader.setSourceIP(CommonMethods.ipStringToInt(tcpServer.localIP));
             //tcpHeader.setSourcePort((short)13221);
-            ipHeader.setDestinationIP(intLocalIP);
+            ipHeader.setDestinationIP(vpnLocalIPInt);
             m_TCPHeader.setDestinationPort((short) tcpServer.port);
             CommonMethods.ComputeTCPChecksum(ipHeader, m_TCPHeader);
             try {
                 vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
                 vpnOutput.flush();
             } catch (IOException e) {
-                Log.e(TAG, "LocalVpnService: 发送TCP数据包失败:" + e);
+                Log.e(TAG, "发送TCP数据包失败:" + e);
             }
         }
     }
@@ -140,14 +140,19 @@ public class LocalServerHelper {
 
         Log.d(TAG, "UDP, source port: " + m_UDPHeader.getSourcePort() + " ===>> destination port:" + ((int) m_UDPHeader.getDestinationPort()));
 
-        //本地报文, 转发给本地UDP服务器
-        //if (ipHeader.getSourceIP() == intLocalIP  && udpHeader.getSourcePort() != udpServer.port) {
-        if (ipHeader.getDestinationIP() != CommonMethods.ipStringToInt(udpServer.localIP)) {
+        //本地报文, 转发给[本地UDP服务器]
+//        if (ipHeader.getSourceIP() == intLocalIP  && m_UDPHeader.getSourcePort() != udpServer.port) {
+        if (ipHeader.getDestinationIP() != UDPServer.udpServerLocalIPInt) {
             try {
                 m_DNSBuffer.clear();
                 m_DNSBuffer.limit(ipHeader.getDataLength() - 8);
                 DnsPacket dnsPacket = DnsPacket.FromBytes(m_DNSBuffer);
                 //Short dnsId = dnsPacket.Header.getID();
+
+                if (dnsPacket == null) {
+                    Log.e(TAG, "UDP, DNS 解析失败, 丢弃数据包");
+                    return;
+                }
 
                 boolean isNeedPollution = false;
                 Question question = dnsPacket.Questions[0];
@@ -158,7 +163,7 @@ public class LocalServerHelper {
                 } else {
                     Matcher matcher = ConfigReader.patternRootDomain.matcher(question.Domain);
                     if (matcher.find()) {
-                        Log.d(TAG, "DNS 查询的地址根目录是: " + matcher.group(1));
+                        Log.d(TAG, "UDP, DNS 查询的地址根目录是: " + matcher.group(1));
                         ipAddr = ConfigReader.rootDomainIpMap.get(matcher.group(1));
                         if (ipAddr != null) {
                             isNeedPollution = true;
@@ -183,9 +188,9 @@ public class LocalServerHelper {
                     if (NATSessionManager.getSession(originPort) == null) {
                         NATSessionManager.createSession(originPort, dstIP, dstPort);
                     }
-                    ipHeader.setSourceIP(CommonMethods.ipStringToInt("7.7.7.7"));
+                    ipHeader.setSourceIP(UDPServer.udpServerLocalIPInt);
                     //udpHeader.setSourcePort(originPort);
-                    ipHeader.setDestinationIP(intLocalIP);
+                    ipHeader.setDestinationIP(vpnLocalIPInt);
                     m_UDPHeader.setDestinationPort((short) udpServer.port);
 
                     ipHeader.setProtocol(IPHeader.UDP);
@@ -194,14 +199,14 @@ public class LocalServerHelper {
 
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
                     vpnOutput.flush();
-                    Log.d(TAG, "LocalVpnService: 本地UDP信息转发给服务器:" + ipHeader + "udp端口" + udpServer.port + "session: " + originPort);
+                    Log.d(TAG, "本地UDP信息转发给服务器:" + ipHeader + "udp端口" + udpServer.port + "session: " + originPort);
                 }
             } catch (Exception e) {
                 Log.d(TAG, "当前udp包不是DNS报文");
             }
         } else {
-            Log.d(TAG, "LocalVpnService: 其它UDP信息,不做处理:" + ipHeader);
-            Log.d(TAG, "LocalVpnService: 其它UDP信息,不做处理:" + m_UDPHeader);
+            Log.d(TAG, "其它UDP信息,不做处理:" + ipHeader);
+            Log.d(TAG, "其它UDP信息,不做处理:" + m_UDPHeader);
             //vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
         }
     }
