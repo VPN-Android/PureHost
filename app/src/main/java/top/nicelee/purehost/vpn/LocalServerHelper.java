@@ -132,13 +132,13 @@ public class LocalServerHelper {
         ByteBuffer m_DNSBuffer = this.m_DNSBuffer;
         IPHeader ipHeader = this.m_IPHeader;
 
-                m_UDPHeader.m_Offset = ipHeader.getHeaderLength();
+        m_UDPHeader.m_Offset = ipHeader.getHeaderLength();
         int originIP = ipHeader.getSourceIP();
         short originPort = m_UDPHeader.getSourcePort();
         int dstIP = ipHeader.getDestinationIP();
         short dstPort = m_UDPHeader.getDestinationPort();
 
-        Log.d(TAG, "LocalVpnService: 收到一个转发到UDPServer的包, 来源: " + m_UDPHeader.getSourcePort() + ", 目的端口:" + ((int) m_UDPHeader.getDestinationPort()));
+        Log.d(TAG, "UDP, source port: " + m_UDPHeader.getSourcePort() + " ===>> destination port:" + ((int) m_UDPHeader.getDestinationPort()));
 
         //本地报文, 转发给本地UDP服务器
         //if (ipHeader.getSourceIP() == intLocalIP  && udpHeader.getSourcePort() != udpServer.port) {
@@ -151,7 +151,7 @@ public class LocalServerHelper {
 
                 boolean isNeedPollution = false;
                 Question question = dnsPacket.Questions[0];
-                Log.d(TAG, "DNS 查询的地址是:" + question.Domain);
+                Log.d(TAG, "UDP, DNS 查询的地址是:" + question.Domain);
                 String ipAddr = ConfigReader.domainIpMap.get(question.Domain);
                 if (ipAddr != null) {
                     isNeedPollution = true;
