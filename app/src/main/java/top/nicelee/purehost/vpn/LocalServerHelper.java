@@ -59,7 +59,7 @@ public class LocalServerHelper {
                 onTCPPacketReceived(size);
                 break;
             case IPHeader.UDP:
-                onUDPPacketReceived(size);
+                onUDPPacketReceived(this.vpnOutput, this.m_IPHeader, this.m_UDPHeader, this.m_DNSBuffer, size);
                 break;
             default:
                 //Log.e(TAG, "不支持的协议类型: " + m_IPHeader.getProtocol());
@@ -122,31 +122,30 @@ public class LocalServerHelper {
         }
     }
 
-    private void onUDPPacketReceived(int size) {
+    private void onUDPPacketReceived(FileOutputStream vpnOutput, IPHeader ipHeader, UDPHeader udpHeader, ByteBuffer dnsBuffer, int size) {
         if (udpServer == null) {
+            Log.e(TAG, "UDP服务未启动");
             return;
         }
-        FileOutputStream vpnOutput = this.vpnOutput;
 
-        UDPHeader m_UDPHeader = this.m_UDPHeader;
-        ByteBuffer m_DNSBuffer = this.m_DNSBuffer;
-        IPHeader ipHeader = this.m_IPHeader;
+        Log.d(TAG, "UDP, udpHeader.m_Offset: " + udpHeader.m_Offset + ", getHeaderLength:" + ipHeader.getHeaderLength());
 
-        m_UDPHeader.m_Offset = ipHeader.getHeaderLength();
-        int originIP = ipHeader.getSourceIP();
-        short originPort = m_UDPHeader.getSourcePort();
+        udpHeader.m_Offset = ipHeader.getHeaderLength();
+
+        int originSourceIP = ipHeader.getSourceIP();
+        short originSourcePort = udpHeader.getSourcePort();
         int dstIP = ipHeader.getDestinationIP();
-        short dstPort = m_UDPHeader.getDestinationPort();
+        short dstPort = udpHeader.getDestinationPort();
 
-        Log.d(TAG, "UDP, source port: " + m_UDPHeader.getSourcePort() + " ===>> destination port:" + ((int) m_UDPHeader.getDestinationPort()));
+        Log.d(TAG, "UDP, source port: " + originSourcePort + ", ===>> destination port:" + dstPort);
 
         //本地报文, 转发给[本地UDP服务器]
 //        if (ipHeader.getSourceIP() == intLocalIP  && m_UDPHeader.getSourcePort() != udpServer.port) {
-        if (ipHeader.getDestinationIP() != UDPServer.udpServerLocalIPInt) {
+        if (dstIP != UDPServer.udpServerLocalIPInt) {
             try {
-                m_DNSBuffer.clear();
-                m_DNSBuffer.limit(ipHeader.getDataLength() - 8);
-                DnsPacket dnsPacket = DnsPacket.FromBytes(m_DNSBuffer);
+                dnsBuffer.clear();
+                dnsBuffer.limit(ipHeader.getDataLength() - 8);
+                DnsPacket dnsPacket = DnsPacket.FromBytes(dnsBuffer);
                 //Short dnsId = dnsPacket.Header.getID();
 
                 if (dnsPacket == null) {
@@ -171,42 +170,42 @@ public class LocalServerHelper {
                     }
                 }
                 if (isNeedPollution) {
-                    createDNSResponseToAQuery(m_UDPHeader.m_Data, dnsPacket, ipAddr);
+                    createDNSResponseToAQuery(udpHeader.m_Data, dnsPacket, ipAddr);
 
                     ipHeader.setTotalLength(20 + 8 + dnsPacket.Size);
-                    m_UDPHeader.setTotalLength(8 + dnsPacket.Size);
+                    udpHeader.setTotalLength(8 + dnsPacket.Size);
 
                     ipHeader.setSourceIP(dstIP);
-                    m_UDPHeader.setSourcePort(dstPort);
-                    ipHeader.setDestinationIP(originIP);
-                    m_UDPHeader.setDestinationPort(originPort);
+                    udpHeader.setSourcePort(dstPort);
+                    ipHeader.setDestinationIP(originSourceIP);
+                    udpHeader.setDestinationPort(originSourcePort);
 
-                    CommonMethods.ComputeUDPChecksum(ipHeader, m_UDPHeader);
+                    CommonMethods.ComputeUDPChecksum(ipHeader, udpHeader);
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
                     vpnOutput.flush();
                 } else {
-                    if (NATSessionManager.getSession(originPort) == null) {
-                        NATSessionManager.createSession(originPort, dstIP, dstPort);
+                    if (NATSessionManager.getSession(originSourcePort) == null) {
+                        NATSessionManager.createSession(originSourcePort, dstIP, dstPort);
                     }
                     ipHeader.setSourceIP(UDPServer.udpServerLocalIPInt);
                     //udpHeader.setSourcePort(originPort);
                     ipHeader.setDestinationIP(vpnLocalIPInt);
-                    m_UDPHeader.setDestinationPort((short) udpServer.port);
+                    udpHeader.setDestinationPort((short) udpServer.port);
 
                     ipHeader.setProtocol(IPHeader.UDP);
-                    CommonMethods.ComputeUDPChecksum(ipHeader, m_UDPHeader);
+                    CommonMethods.ComputeUDPChecksum(ipHeader, udpHeader);
 
 
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
                     vpnOutput.flush();
-                    Log.d(TAG, "本地UDP信息转发给服务器:" + ipHeader + "udp端口" + udpServer.port + "session: " + originPort);
+                    Log.d(TAG, "本地UDP信息转发给服务器:" + ipHeader + " udpServer端口:" + udpServer.port + " session: " + originSourcePort);
                 }
             } catch (Exception e) {
                 Log.d(TAG, "当前udp包不是DNS报文");
             }
         } else {
             Log.d(TAG, "其它UDP信息,不做处理:" + ipHeader);
-            Log.d(TAG, "其它UDP信息,不做处理:" + m_UDPHeader);
+            Log.d(TAG, "其它UDP信息,不做处理:" + udpHeader);
             //vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
         }
     }

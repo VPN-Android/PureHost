@@ -3,6 +3,7 @@ package top.nicelee.purehost.vpn.ip;
 import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Locale;
 
 public class CommonMethods {
 
@@ -19,7 +20,7 @@ public class CommonMethods {
     }
 
     public static String ipIntToString(int ip) {
-        return String.format("%d.%d.%d.%d", (ip >> 24) & 0x00FF,
+        return String.format(Locale.ENGLISH, "%d.%d.%d.%d", (ip >> 24) & 0x00FF,
                 (ip >> 16) & 0x00FF, (ip >> 8) & 0x00FF, ip & 0x00FF);
     }
 
