@@ -1,5 +1,9 @@
 package top.nicelee.purehost.vpn.ip;
 
+import androidx.annotation.NonNull;
+
+import java.util.Locale;
+
 public class UDPHeader {
     static final short offset_src_port = 0; // Source port
     static final short offset_dest_port = 2; // Destination port
@@ -18,12 +22,20 @@ public class UDPHeader {
         return CommonMethods.readShort(m_Data, m_Offset + offset_src_port);
     }
 
+    public int getSourcePortInt() {
+        return CommonMethods.readUnsignedShort(m_Data, m_Offset + offset_src_port);
+    }
+
     public void setSourcePort(short value) {
         CommonMethods.writeShort(m_Data, m_Offset + offset_src_port, value);
     }
 
     public short getDestinationPort() {
         return CommonMethods.readShort(m_Data, m_Offset + offset_dest_port);
+    }
+
+    public int getDestinationPortInt() {
+        return CommonMethods.readUnsignedShort(m_Data, m_Offset + offset_dest_port);
     }
 
     public void setDestinationPort(short value) {
@@ -46,10 +58,10 @@ public class UDPHeader {
         CommonMethods.writeShort(m_Data, m_Offset + offset_crc, value);
     }
 
+    @NonNull
     @Override
     public String toString() {
-        // TODO Auto-generated method stub
-        return String.format("%d->%d", getSourcePort() & 0xFFFF,
+        return String.format(Locale.ENGLISH, "%d->%d", getSourcePort() & 0xFFFF,
                 getDestinationPort() & 0xFFFF);
     }
 }

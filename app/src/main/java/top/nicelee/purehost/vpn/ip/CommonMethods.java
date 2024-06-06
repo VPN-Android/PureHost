@@ -49,6 +49,11 @@ public class CommonMethods {
         return (short) r;
     }
 
+    public static int readUnsignedShort(byte[] data, int offset) {
+        int value = ((data[offset] & 0xFF) << 8) | (data[offset + 1] & 0xFF);
+        return value;
+    }
+
     public static void writeInt(byte[] data, int offset, int value) {
         data[offset] = (byte) (value >> 24);
         data[offset + 1] = (byte) (value >> 16);
