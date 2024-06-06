@@ -155,8 +155,7 @@ public class CommonMethods {
             return false;
         }
         // 计算为伪首部和
-        long sum = getsum(ipHeader.m_Data, ipHeader.m_Offset
-                + IPHeader.offset_src_ip, 8);
+        long sum = getsum(ipHeader.m_Data, ipHeader.m_Offset + IPHeader.offset_src_ip, 8);
         sum += ipHeader.getProtocol() & 0xFF;
         sum += ipData_len;
 

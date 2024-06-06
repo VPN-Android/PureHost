@@ -132,7 +132,7 @@ public class LocalServerHelper {
                     if (NATSessionManager.getSession(originSourcePort) == null) {
                         NATSessionManager.createSession(originSourcePort, dstIP, dstPort);
                     }
-                    ipHeader.setSourceIP(UDPServer.udpServerLocalIPInt);
+                    ipHeader.setSourceIP(UDPServer.udpServerLocalIPInt);    // 7.7.7.7:7777
                     //udpHeader.setSourcePort(originPort);
                     ipHeader.setDestinationIP(vpnLocalIPInt);
                     udpHeader.setDestinationPort((short) udpServer.port);
@@ -143,7 +143,7 @@ public class LocalServerHelper {
 
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
                     vpnOutput.flush();
-                    Log.d(TAG, "[本地UDP服务] 转发给VPN:" + ipHeader + " udpServer端口:" + udpServer.port + " session: " + originSourcePort);
+                    Log.d(TAG, "[本地UDP服务] 转发给VPN:" + ipHeader + " udpServer端口:" + udpServer.port + " session: " + originSourcePort + ", 0x" + (originSourcePort & 0xFFFF));
                 }
             } catch (Exception e) {
                 Log.d(TAG, "当前udp包不是DNS报文");
@@ -156,9 +156,6 @@ public class LocalServerHelper {
     }
 
     private void onTCPPacketReceived(FileOutputStream vpnOutput, IPHeader ipHeader, TCPHeader tcpHeader, int size) {
-        if (tcpServer == null) {
-            return;
-        }
 
         Log.d(TAG, "TCP消息:" + ipHeader + "tcp: " + tcpHeader);
 
@@ -172,6 +169,8 @@ public class LocalServerHelper {
 
                 CommonMethods.ComputeTCPChecksum(ipHeader, tcpHeader);
                 try {
+                    Log.d(TAG, ">>>>>>>>>>>>>>> TCP:， 转发，" + ipHeader);
+
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
                     vpnOutput.flush();
                 } catch (IOException e) {
@@ -187,16 +186,21 @@ public class LocalServerHelper {
             NATSession session = NATSessionManager.getSession(portKey);
             if (session == null || session.remoteIP != ipHeader.getDestinationIP() || session.remotePort != tcpHeader.getDestinationPort()) {
                 session = NATSessionManager.createSession(portKey, ipHeader.getDestinationIP(), tcpHeader.getDestinationPort());
-                Log.d(TAG, "LocalVpnService Session: key Port: " + portKey);
-                Log.d(TAG, "LocalVpnService Session: ip : " + CommonMethods.ipIntToString(ipHeader.getDestinationIP()));
-                Log.d(TAG, "LocalVpnService Session: port : " + (int) (tcpHeader.getDestinationPort()));
+                Log.d(TAG, "key Port: " + portKey + " 0x" + (portKey & 0xFFFF));
+                Log.d(TAG, "ip : " + CommonMethods.ipIntToString(ipHeader.getDestinationIP()));
+                Log.d(TAG, "port : " + (int) (tcpHeader.getDestinationPort()) + " 0x" + (((int) (tcpHeader.getDestinationPort())) & 0xFFFF));
+
+                Log.d(TAG, "---------- createSession, :" + session.remoteHost + " " + session.remoteIP + " " + session.remotePort);
             }
             ipHeader.setSourceIP(CommonMethods.ipStringToInt(tcpServer.localIP));
             //tcpHeader.setSourcePort((short)13221);
             ipHeader.setDestinationIP(vpnLocalIPInt);
+
+            Log.d(TAG, "================= TCP消息:" + ipHeader + "tcp: " + tcpHeader + " " + tcpServer.port);
             tcpHeader.setDestinationPort((short) tcpServer.port);
             CommonMethods.ComputeTCPChecksum(ipHeader, tcpHeader);
             try {
+                Log.d(TAG, "================= TCP:， 写回去给虚拟网卡，" + ipHeader);
                 vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
                 vpnOutput.flush();
             } catch (IOException e) {

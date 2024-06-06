@@ -24,7 +24,7 @@ class VpnViewModel(private val source: VpnDataSource) : ViewModel() {
 
 
     //收到的IP报文Buffer
-    private val packetBuffer = ByteArray(1024 * 32)
+    private val packetBuffer = ByteArray(1024 * 20)
 
     suspend fun startProcessVpnPacket(vpnService: LocalVpnServiceKT, localIP: String) {
 

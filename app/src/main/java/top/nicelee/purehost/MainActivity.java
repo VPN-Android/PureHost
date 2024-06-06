@@ -45,6 +45,19 @@ public class MainActivity extends Activity {
         textDNS2 = findViewById(R.id.dnsConfig2);
 
         btnStart = findViewById(R.id.btnStart);
+
+        Button getButton = findViewById(R.id.http_get);
+        getButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    new HttpGetTest().get();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
         btnStart.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {

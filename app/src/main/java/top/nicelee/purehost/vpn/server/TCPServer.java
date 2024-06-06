@@ -19,7 +19,7 @@ public class TCPServer implements Runnable{
 	private static final String TAG = "TCPServer";
 	// Socket协议服务端
 	public String localIP = "6.6.6.6";
-	public int port;
+	public int port = 6666;
 	public String vpnLocalIP;
 	ServerSocketChannel serverSocketChannel;
 	Selector selector = null;

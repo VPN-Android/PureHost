@@ -52,7 +52,7 @@ object ParcelFileDescriptorHelper {
         //builder.addSearchDomain(...);
         //builder.setConfigureIntent(...);
 
-        builder.setMtu(1024 * 32)
+        builder.setMtu(1024 * 20)
         builder.setBlocking(true)
         return builder.establish()
     }
