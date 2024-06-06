@@ -23,7 +23,7 @@ public class IPHeader {
     public static final int offset_dest_ip = 16; // 16: Destination address
     static final int offset_op_pad = 20; // 20: Option + Padding
 
-    public byte[] m_Data;
+    public final byte[] m_Data;
     public int m_Offset;
 
     public IPHeader(byte[] data, int offset) {

@@ -10,7 +10,6 @@ import java.nio.channels.SocketChannel;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import top.nicelee.purehost.vpn.LocalVpnServiceKT;
 import top.nicelee.purehost.vpn.ip.CommonMethods;
 
 public class TwinsChannel {
@@ -49,7 +48,7 @@ public class TwinsChannel {
 		//Log.d(TAG,"VpnService Socket RemoteIP:  192.168.1.103");
 		//Log.d(TAG,"VpnService Socket RemotePort:  7778");
 		//建立远程连接
-		InetSocketAddress soAddr = new InetSocketAddress(CommonMethods.ipIntToString(session.RemoteIP), (session.RemotePort));
+		InetSocketAddress soAddr = new InetSocketAddress(CommonMethods.ipIntToString(session.remoteIP), (session.remotePort));
 		//Log.d(TAG,"VpnService Socket 正在连接中... "+ soAddr.toString());
 		remoteSc.connect(soAddr);
 		remoteSc.register(selector, SelectionKey.OP_READ, this);

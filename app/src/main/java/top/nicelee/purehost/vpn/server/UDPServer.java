@@ -5,8 +5,8 @@ import android.util.Log;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.SocketAddress;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,121 +17,121 @@ import top.nicelee.purehost.vpn.ip.UDPHeader;
 
 
 public class UDPServer implements Runnable {
-	private static final String TAG = "UDPServer";
-	public static final String udpServerLocalIP = "7.7.7.7";
-	public static final int udpServerLocalIPInt = CommonMethods.ipStringToInt(udpServerLocalIP);
-	public int port = 7777;
-	public String vpnLocalIP;
-	private LocalVpnServiceKT vpnService;
-	
-	final int MAX_LENGTH = 1024;
-	byte[] receMsgs = new byte[MAX_LENGTH];
+    private static final String TAG = "UDPServer";
+    public static final String udpServerLocalIP = "7.7.7.7";
+    public static final int udpServerLocalIPInt = CommonMethods.ipStringToInt(udpServerLocalIP);
+    public int port;
+    public String vpnLocalIP;
+    private LocalVpnServiceKT vpnService;
 
-	DatagramSocket udpSocket;
-	DatagramPacket packet;
-	DatagramPacket sendPacket;
-	Pattern patternURL = Pattern.compile("^/([^:]+):(.*)$");
+    final int MAX_LENGTH = 1024 * 32;
+    byte[] receMsgs = new byte[MAX_LENGTH];
 
-	Thread udpThread;
-	public void start(){
-		udpThread = new Thread(this);
-		udpThread.setName("UDPServer - Thread");
-		udpThread.start();
-	}
+    DatagramSocket udpDatagramSocket;
+    DatagramPacket datagramPacket;
+    DatagramPacket sendPacket;
+    Pattern patternURL = Pattern.compile("^/([^:]+):(.*)$");
 
-	public void stop(){
-		udpSocket.close();
-		udpThread.interrupt();
-	}
-	public UDPServer(LocalVpnServiceKT vpnService, String vpnLocalIP) {
-		this.vpnService = vpnService;
-		this.vpnLocalIP = vpnLocalIP;
-		try {
-			init(vpnService);
-		} catch (UnknownHostException | SocketException e) {
-			e.printStackTrace();
-		}
-	}
-	
-	public void init(LocalVpnServiceKT vpnService) throws UnknownHostException, SocketException {
-		udpSocket = new DatagramSocket();
-		vpnService.protect(udpSocket);
-		port = udpSocket.getLocalPort();
-		packet = new DatagramPacket(receMsgs, 28 , receMsgs.length - 28);
-	}
+    Thread udpThread;
 
-	private void service() {
-		Log.d(TAG,"UDPServer: UDP服务器启动, 端口为: " + port);
-		try {
-			while (true) {
-				udpSocket.receive(packet);
-				
-				Matcher matcher = patternURL.matcher(packet.getSocketAddress().toString());
-				matcher.find();
-				//Log.d(TAG,"UDPServer: 收到udp消息" + packet.getSocketAddress().toString());
-				if (udpServerLocalIP.equals(matcher.group(1))) {
-					
-					//Log.d(TAG,"UDPServer: UDPServer收到本地消息" + packet.getSocketAddress().toString());
-					NATSession session = NATSessionManager.getSession((short)packet.getPort());
-					if( session == null) {
-						//Log.d(TAG,"UDPServer: NATSessionManager中未找到session" + packet.getPort());
-						continue;
-					}
-					//Log.d(TAG,"UDPServer: NATSessionManager中找到session"+ packet.getPort());
-					sendPacket = new DatagramPacket(receMsgs, 28, packet.getLength(), CommonMethods.ipIntToInet4Address(session.RemoteIP), (int)session.RemotePort);
-					udpSocket.send(sendPacket);
-				}else {
-					//Log.d(TAG,"UDPServer: UDPServer收到外部消息"+ packet.getSocketAddress().toString());
-					//如果消息来自外部, 转进来
-					NATSession session = new NATSession();
-					session.RemoteIP = CommonMethods.ipStringToInt(matcher.group(1));
-					session.RemotePort = (short) packet.getPort();
-					Short port = NATSessionManager.getPort(session);
-					if( port == null) {
-						//Log.d(TAG,"UDPServer: 收到外部UDP消息, 未在Session中找到");
-						continue;
-					}
-					//Log.d(TAG,"UDPServer: 收到外部UDP消息, 在Session中找到, port" + port +" ,port & 0xFF:" + (port & 0xFFFF));
+    public void start() {
+        udpThread = new Thread(this);
+        udpThread.setName("UDPServer - Thread");
+        udpThread.start();
+    }
+
+    public void stop() {
+        udpDatagramSocket.close();
+        udpThread.interrupt();
+    }
+
+    public UDPServer(LocalVpnServiceKT vpnService, String vpnLocalIP) {
+        this.vpnService = vpnService;
+        this.vpnLocalIP = vpnLocalIP;
+        try {
+            udpDatagramSocket = new DatagramSocket();// 填写参数，可以固定端口，如果去掉之后，会随机分配端口
+            vpnService.protect(udpDatagramSocket);
+            port = udpDatagramSocket.getLocalPort();
+            datagramPacket = new DatagramPacket(receMsgs, 28, receMsgs.length - 28);
+        } catch (SocketException e) {
+            Log.e(TAG, "UDPServer: 创建udpDatagramSocket失败", e);
+        }
+    }
 
 
-					IPHeader ipHeader = new IPHeader(receMsgs, 0);
-					ipHeader.Default();
-					ipHeader.setDestinationIP(CommonMethods.ipStringToInt(vpnLocalIP));
-					ipHeader.setSourceIP(session.RemoteIP);
-					ipHeader.setTotalLength(20 + 8 + packet.getLength());
-					ipHeader.setHeaderLength(20);
-					ipHeader.setProtocol(IPHeader.UDP);
-					ipHeader.setTTL((byte)30);
+    private void service() {
+        Log.d(TAG, "UDPServer: UDP服务器启动, 端口为: " + port);
+        try {
+            while (true) {
+                udpDatagramSocket.receive(datagramPacket);
 
-					UDPHeader udpHeader = new UDPHeader(receMsgs, 20);
-					udpHeader.setDestinationPort((short)port);
-					udpHeader.setSourcePort(session.RemotePort);
-					udpHeader.setTotalLength(8 + packet.getLength());
+				SocketAddress socketAddress = datagramPacket.getSocketAddress();
+				int socketPort = datagramPacket.getPort();
 
-					//LocalVpnService.Instance.sendUDPPacket(ipHeader, udpHeader);
-					vpnService.sendUDPPacket(ipHeader, udpHeader);
-				}
-			}
-		} catch (SocketException e) {
-			//e.printStackTrace();
-			//ConfigReader.writeHost(e.toString());
-		}catch (IOException e) {
-			//e.printStackTrace();
-			//ConfigReader.writeHost(e.toString());
-		} catch (Exception e) {
-			//e.printStackTrace();
-			//ConfigReader.writeHost(e.toString());
-		} finally {
-			// 关闭socket
-			Log.d(TAG,"UDPServer: udpServer已关闭");
-			if (udpSocket != null) {
-				udpSocket.close();
-			}
-		}
-	}
+                Matcher matcher = patternURL.matcher(socketAddress.toString());
+                matcher.find();
+                Log.d(TAG,"UDPServer: 收到udp消息: " + socketAddress);
+                if (udpServerLocalIP.equals(matcher.group(1))) {
+                    Log.d(TAG,"UDPServer: UDPServer收到本地消息" + socketAddress);
+                    NATSession session = NATSessionManager.getSession((short) socketPort);
+                    if (session == null) {
+                        Log.d(TAG,"UDPServer: NATSessionManager中未找到session" + socketPort);
+                        continue;
+                    }
+                    Log.d(TAG,"UDPServer: NATSessionManager中找到session"+ socketPort);
+                    sendPacket = new DatagramPacket(receMsgs, 28, datagramPacket.getLength(), CommonMethods.ipIntToInet4Address(session.remoteIP), session.remotePort);
+                    udpDatagramSocket.send(sendPacket);
+                } else {
+                    Log.d(TAG,"UDPServer: UDPServer收到外部消息: "+ socketAddress);
+                    //如果消息来自外部, 转进来
+                    NATSession session = new NATSession();
+                    session.remoteIP = CommonMethods.ipStringToInt(matcher.group(1));
+                    session.remotePort = (short) socketPort;
+                    Short port = NATSessionManager.getPort(session);
+                    if (port == null) {
+                        Log.d(TAG,"UDPServer: 收到外部UDP消息, 未在Session中找到");
+                        continue;
+                    }
+                    Log.d(TAG,"UDPServer: 收到外部UDP消息, 在Session中找到, port" + port +" ,port & 0xFF:" + (port & 0xFFFF));
 
-	@Override
-	public void run() {
-		service();
-	}
+                    IPHeader ipHeader = new IPHeader(receMsgs, 0);
+                    ipHeader.Default();
+                    ipHeader.setDestinationIP(CommonMethods.ipStringToInt(vpnLocalIP));
+                    ipHeader.setSourceIP(session.remoteIP);
+                    ipHeader.setTotalLength(20 + 8 + datagramPacket.getLength());
+                    ipHeader.setHeaderLength(20);
+                    ipHeader.setProtocol(IPHeader.UDP);
+                    ipHeader.setTTL((byte) 30);
+
+                    UDPHeader udpHeader = new UDPHeader(receMsgs, 20);
+                    udpHeader.setDestinationPort((short) port);
+                    udpHeader.setSourcePort(session.remotePort);
+                    udpHeader.setTotalLength(8 + datagramPacket.getLength());
+
+                    //LocalVpnService.Instance.sendUDPPacket(ipHeader, udpHeader);
+                    vpnService.sendUDPPacket(ipHeader, udpHeader);
+                }
+            }
+        } catch (SocketException e) {
+            //e.printStackTrace();
+            //ConfigReader.writeHost(e.toString());
+        } catch (IOException e) {
+            //e.printStackTrace();
+            //ConfigReader.writeHost(e.toString());
+        } catch (Exception e) {
+            //e.printStackTrace();
+            //ConfigReader.writeHost(e.toString());
+        } finally {
+            // 关闭socket
+            Log.d(TAG, "UDPServer: udpServer已关闭");
+            if (udpDatagramSocket != null) {
+                udpDatagramSocket.close();
+            }
+        }
+    }
+
+    @Override
+    public void run() {
+        service();
+    }
 }

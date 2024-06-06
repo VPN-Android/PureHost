@@ -148,11 +148,12 @@ public class CommonMethods {
     }
 
     // 计算TCP或UDP的校验和
-    public static boolean ComputeUDPChecksum(IPHeader ipHeader, UDPHeader udpHeader) {
+    public static boolean computeUDPChecksum(IPHeader ipHeader, UDPHeader udpHeader) {
         ComputeIPChecksum(ipHeader);//计算IP校验和
         int ipData_len = ipHeader.getTotalLength() - ipHeader.getHeaderLength();// IP数据长度
-        if (ipData_len < 0)
+        if (ipData_len < 0) {
             return false;
+        }
         // 计算为伪首部和
         long sum = getsum(ipHeader.m_Data, ipHeader.m_Offset
                 + IPHeader.offset_src_ip, 8);

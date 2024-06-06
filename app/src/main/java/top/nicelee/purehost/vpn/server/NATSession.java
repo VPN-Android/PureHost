@@ -1,18 +1,18 @@
 package top.nicelee.purehost.vpn.server;
 
 public class NATSession {
-	public int RemoteIP;
-    public short RemotePort;
-    public String RemoteHost;
+	public int remoteIP;
+    public short remotePort;
+    public String remoteHost;
     public int BytesSent;
     public int PacketSent;
-    public long LastNanoTime;
+    public long lastNanoTime;
     
     @Override
     public boolean equals(Object obj) {
     	if( obj instanceof NATSession) {
     		NATSession session = (NATSession)obj;
-    		if(this.RemoteIP == session.RemoteIP && this.RemotePort == session.RemotePort) {
+    		if(this.remoteIP == session.remoteIP && this.remotePort == session.remotePort) {
     			return true;
     		}
     	}
@@ -21,7 +21,7 @@ public class NATSession {
     
     @Override
     public int hashCode() {
-    	int hash = RemotePort * 31 + RemoteIP;
+    	int hash = remotePort * 31 + remoteIP;
     	return hash;
     }
 }

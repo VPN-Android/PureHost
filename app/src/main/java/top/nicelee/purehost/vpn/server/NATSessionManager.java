@@ -9,51 +9,51 @@ import top.nicelee.purehost.vpn.ip.CommonMethods;
 public class NATSessionManager {
 	static final int MAX_SESSION_COUNT = 60;
     static final long SESSION_TIMEOUT_NS = 60 * 1000000000L;
-    static final ConcurrentHashMap<Integer, NATSession> Sessions = new ConcurrentHashMap<>();
-    static final ConcurrentHashMap<NATSession, Short> UDPNATSessions = new ConcurrentHashMap<>();
+    static final ConcurrentHashMap<Integer, NATSession> sSessions = new ConcurrentHashMap<>();
+    static final ConcurrentHashMap<NATSession, Short> sUDPNATSessions = new ConcurrentHashMap<>();
 
     public static Short getPort(NATSession socket) {
-    	return UDPNATSessions.get(socket);
+    	return sUDPNATSessions.get(socket);
     }
     
     public static NATSession getSession(int portKey) {
-    	NATSession session = Sessions.get(portKey);
+    	NATSession session = sSessions.get(portKey);
         if (session!=null) {
-            session.LastNanoTime = System.nanoTime();
+            session.lastNanoTime = System.nanoTime();
         }
-        return Sessions.get(portKey);
+        return sSessions.get(portKey);
     }
 
     public static int getSessionCount() {
-        return Sessions.size();
+        return sSessions.size();
     }
 
     static void clearExpiredSessions() {
         long now = System.nanoTime();
-        for (Entry<Integer, NATSession> entry: Sessions.entrySet()) {
+        for (Entry<Integer, NATSession> entry: sSessions.entrySet()) {
         	NATSession session = entry.getValue();
-            if (now - session.LastNanoTime > SESSION_TIMEOUT_NS) {
-            	Sessions.remove(entry.getKey());
-            	UDPNATSessions.remove(entry.getValue());
+            if (now - session.lastNanoTime > SESSION_TIMEOUT_NS) {
+            	sSessions.remove(entry.getKey());
+            	sUDPNATSessions.remove(entry.getValue());
             }
         }
     }
 
     public static NATSession createSession(int portKey, int remoteIP, short remotePort) {
-        if (Sessions.size() > MAX_SESSION_COUNT) {
+        if (sSessions.size() > MAX_SESSION_COUNT) {
             clearExpiredSessions();//清理过期的会话。
         }
 
         NATSession session = new NATSession();
-        session.LastNanoTime = System.nanoTime();
-        session.RemoteIP = remoteIP;
-        session.RemotePort = remotePort;
+        session.lastNanoTime = System.nanoTime();
+        session.remoteIP = remoteIP;
+        session.remotePort = remotePort;
 
-        if (session.RemoteHost == null) {
-            session.RemoteHost = CommonMethods.ipIntToString(remoteIP);
+        if (session.remoteHost == null) {
+            session.remoteHost = CommonMethods.ipIntToString(remoteIP);
         }
-        Sessions.put(portKey, session);
-        UDPNATSessions.put(session, (short)portKey);
+        sSessions.put(portKey, session);
+        sUDPNATSessions.put(session, (short)portKey);
         return session;
     }
 }

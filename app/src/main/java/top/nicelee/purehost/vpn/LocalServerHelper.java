@@ -125,7 +125,7 @@ public class LocalServerHelper {
                     ipHeader.setDestinationIP(ipHeader.getSourceIP());
                     udpHeader.setDestinationPort(originSourcePort);
 
-                    CommonMethods.ComputeUDPChecksum(ipHeader, udpHeader);
+                    CommonMethods.computeUDPChecksum(ipHeader, udpHeader);
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
                     vpnOutput.flush();
                 } else {
@@ -137,13 +137,13 @@ public class LocalServerHelper {
                     ipHeader.setDestinationIP(vpnLocalIPInt);
                     udpHeader.setDestinationPort((short) udpServer.port);
 
-                    ipHeader.setProtocol(IPHeader.UDP);
-                    CommonMethods.ComputeUDPChecksum(ipHeader, udpHeader);
+                    //ipHeader.setProtocol(IPHeader.UDP);
+                    CommonMethods.computeUDPChecksum(ipHeader, udpHeader);
 
 
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
                     vpnOutput.flush();
-                    Log.d(TAG, "本地UDP信息转发给服务器:" + ipHeader + " udpServer端口:" + udpServer.port + " session: " + originSourcePort);
+                    Log.d(TAG, "[本地UDP服务] 转发给VPN:" + ipHeader + " udpServer端口:" + udpServer.port + " session: " + originSourcePort);
                 }
             } catch (Exception e) {
                 Log.d(TAG, "当前udp包不是DNS报文");
@@ -166,8 +166,8 @@ public class LocalServerHelper {
             //来自TCP服务器
             NATSession session = NATSessionManager.getSession(tcpHeader.getDestinationPort());
             if (session != null) {
-                ipHeader.setSourceIP(session.RemoteIP);
-                tcpHeader.setSourcePort(session.RemotePort);
+                ipHeader.setSourceIP(session.remoteIP);
+                tcpHeader.setSourcePort(session.remotePort);
                 ipHeader.setDestinationIP(vpnLocalIPInt);
 
                 CommonMethods.ComputeTCPChecksum(ipHeader, tcpHeader);
@@ -185,7 +185,7 @@ public class LocalServerHelper {
             // 添加端口映射
             int portKey = tcpHeader.getSourcePort();
             NATSession session = NATSessionManager.getSession(portKey);
-            if (session == null || session.RemoteIP != ipHeader.getDestinationIP() || session.RemotePort != tcpHeader.getDestinationPort()) {
+            if (session == null || session.remoteIP != ipHeader.getDestinationIP() || session.remotePort != tcpHeader.getDestinationPort()) {
                 session = NATSessionManager.createSession(portKey, ipHeader.getDestinationIP(), tcpHeader.getDestinationPort());
                 Log.d(TAG, "LocalVpnService Session: key Port: " + portKey);
                 Log.d(TAG, "LocalVpnService Session: ip : " + CommonMethods.ipIntToString(ipHeader.getDestinationIP()));
@@ -246,10 +246,10 @@ public class LocalServerHelper {
     public void sendUDPPacket(IPHeader ipHeader, UDPHeader udpHeader) {
         try {
             FileOutputStream vpnOutput = this.vpnOutput;
-            CommonMethods.ComputeUDPChecksum(ipHeader, udpHeader);
+            CommonMethods.computeUDPChecksum(ipHeader, udpHeader);
             vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
         } catch (IOException e) {
-            e.printStackTrace();
+            Log.e(TAG, "发送UDP数据包失败:" + e);
         }
     }
 }
