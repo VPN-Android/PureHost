@@ -2,14 +2,12 @@ package top.nicelee.purehost.vpn.server;
 
 import android.util.Log;
 
-import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketException;
 import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import top.nicelee.purehost.vpn.LocalVpnServiceKT;
 import top.nicelee.purehost.vpn.ip.CommonMethods;
@@ -23,7 +21,7 @@ public class UDPServer implements Runnable {
     public static final int udpServerLocalIPInt = CommonMethods.ipStringToInt(udpServerLocalIP);
     public int port;
     public String vpnLocalIP;
-    private LocalVpnServiceKT vpnService;
+    private final LocalVpnServiceKT vpnService;
 
     final int MAX_LENGTH = 1024 * 20;
     byte[] receMsgs = new byte[MAX_LENGTH];
@@ -31,7 +29,6 @@ public class UDPServer implements Runnable {
     DatagramSocket udpDatagramSocket;
     DatagramPacket datagramPacket;
     DatagramPacket sendPacket;
-    Pattern patternURL = Pattern.compile("^/([^:]+):(.*)$");
 
     Thread udpThread;
 
@@ -67,17 +64,21 @@ public class UDPServer implements Runnable {
     private void service() {
         Log.d(TAG, "UDP服务器启动, 端口为: " + port);
         try {
-            while (true) {
+            while (udpThread != null && !udpThread.isInterrupted()) {
                 Log.d(TAG, "阻塞等待，UDP消息");
                 udpDatagramSocket.receive(datagramPacket);
 
-                SocketAddress socketAddress = datagramPacket.getSocketAddress();
+                InetSocketAddress socketAddress = (InetSocketAddress) datagramPacket.getSocketAddress();
                 int socketPort = datagramPacket.getPort();
 
-                Matcher matcher = patternURL.matcher(socketAddress.toString());
-                matcher.find();
+                String hostAddress = socketAddress.getAddress().getHostAddress();
+                if (hostAddress == null || hostAddress.isEmpty()) {
+                    Log.e(TAG, "hostAddress为空");
+                    continue;
+                }
+
                 Log.d(TAG, "收到udp消息: " + socketAddress);
-                if (udpServerLocalIP.equals(matcher.group(1))) {
+                if (udpServerLocalIP.equals(hostAddress)) {
                     Log.d(TAG, "UDPServer收到本地消息" + socketAddress);
                     NATSession session = NATSessionManager.getSession((short) socketPort);
                     if (session == null) {
@@ -92,7 +93,7 @@ public class UDPServer implements Runnable {
                     Log.d(TAG, "UDPServer收到外部消息: " + socketAddress);
                     //如果消息来自外部, 转进来
                     NATSession session = new NATSession();
-                    session.remoteIP = CommonMethods.ipStringToInt(matcher.group(1));
+                    session.remoteIP = CommonMethods.ipStringToInt(hostAddress);
                     session.remotePort = (short) socketPort;
                     Short port = NATSessionManager.getPort(session);
                     if (port == null) {
@@ -136,15 +137,8 @@ public class UDPServer implements Runnable {
                     vpnService.sendUDPPacket(ipHeader, udpHeader);
                 }
             }
-        } catch (SocketException e) {
-            //e.printStackTrace();
-            //ConfigReader.writeHost(e.toString());
-        } catch (IOException e) {
-            //e.printStackTrace();
-            //ConfigReader.writeHost(e.toString());
         } catch (Exception e) {
-            //e.printStackTrace();
-            //ConfigReader.writeHost(e.toString());
+            Log.e(TAG, "UDP服务异常", e);
         } finally {
             // 关闭socket
             Log.d(TAG, "udpServer已关闭");
