@@ -37,7 +37,8 @@ public class TwinsChannel {
 		remoteSc.configureBlocking(false);
 //        Log.d(TAG,"VpnService Socket Protect成功: "+ LocalVpnService.Instance.protect(remoteSc.socket()));
 //        LocalVpnService.Instance.protect(remoteSc.socket());
-		vpnService.protect(remoteSc.socket());
+		boolean protect = vpnService.protect(remoteSc.socket());
+		Log.d(TAG,"VpnService Socket Protect成功: "+ protect);
 
 		Matcher matcher = patternURL.matcher(localSc.getRemoteAddress().toString());
 		matcher.find();

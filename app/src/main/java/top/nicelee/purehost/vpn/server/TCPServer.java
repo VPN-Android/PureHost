@@ -21,7 +21,7 @@ import top.nicelee.purehost.vpn.ip.CommonMethods;
 public class TCPServer implements Runnable{
 	private static final String TAG = "TCPServer";
 	// Socket协议服务端
-	public static final String tcpServerLocalIP = "6.6.6.6";
+	public static final String tcpServerLocalIP = "198.198.198.101";
 	public static final int tcpServerLocalIPInt = CommonMethods.ipStringToInt(tcpServerLocalIP);
 	public int port = 0;
 	public String vpnLocalIP;
@@ -132,12 +132,8 @@ public class TCPServer implements Runnable{
 					} catch (Exception cex) {
 						//cex.printStackTrace();
 					}
-				} finally {
-
 				}
-				Thread.sleep(100);
 			}
-			Thread.sleep(100);
 		}
 		Log.d(TAG,"-----程序结束-----");
 	}
@@ -146,8 +142,10 @@ public class TCPServer implements Runnable{
 
 	public void reveice(SelectionKey key) throws IOException {
 		 Log.d(TAG,"----收到Read事件----");
-		if (key == null)
+		if (key == null) {
+			Log.e(TAG,"key is null");
 			return;
+		}
 
 		SocketChannel sc = (SocketChannel) key.channel();
 		 Log.d(TAG,"消息来自: " + sc.getRemoteAddress().toString());
@@ -167,30 +165,30 @@ public class TCPServer implements Runnable{
 				Log.d(TAG,"消息来自本地: " + sc.getRemoteAddress().toString());
 				ByteBuffer buf = ByteBuffer.allocate(2014);
 				int bytesRead = sc.read(buf);
-				//String content = "";
+				String content = "";
 				while (bytesRead > 0) {
-					//content += new String(buf.array(), 0, buf.position());
+					content += new String(buf.array(), 0, buf.position());
 					buf.flip();
 					twins.remoteSc.write(buf);
 					buf.clear();
 					bytesRead = sc.read(buf);
 				}
-				//Log.d(TAG,"来自内部的消息是: " + content.trim());
+				Log.d(TAG,"来自内部的消息是: " + content.trim());
 			}
 		} else {
 			// 如果消息来自外部, 转给内部
 			Log.d(TAG,"消息来自外部: " + sc.getRemoteAddress().toString());
 			ByteBuffer buf = ByteBuffer.allocate(2014);
 			int bytesRead = sc.read(buf);
-			//String content = "";
+			String content = "";
 			while (bytesRead > 0) {
-				//content += new String(buf.array(), 0, buf.position());
+				content += new String(buf.array(), 0, buf.position());
 				buf.flip();
 				twins.localSc.write(buf);
 				buf.clear();
 				bytesRead = sc.read(buf);
 			}
-			//Log.d(TAG,"来自外部的消息是: " + content.trim());
+			Log.d(TAG,"来自外部的消息是: " + content.trim());
 		}
 	}
 

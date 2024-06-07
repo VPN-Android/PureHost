@@ -26,7 +26,7 @@ public class LocalServerHelper {
 
     private static final String TAG = "LocalServerHelper";
 
-    public static final String vpnLocalIP = "168.168.168.168";
+    public static final String vpnLocalIP = "198.198.198.100";
     int vpnLocalIPInt = CommonMethods.ipStringToInt(vpnLocalIP);
     TCPServer tcpServer;
     UDPServer udpServer;
