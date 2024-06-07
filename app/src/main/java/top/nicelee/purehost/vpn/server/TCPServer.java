@@ -14,12 +14,16 @@ import java.util.Iterator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import top.nicelee.purehost.vpn.LocalVpnServiceKT;
+import top.nicelee.purehost.vpn.ip.CommonMethods;
+
 
 public class TCPServer implements Runnable{
 	private static final String TAG = "TCPServer";
 	// Socket协议服务端
-	public String localIP = "6.6.6.6";
-	public int port = 6666;
+	public static final String tcpServerLocalIP = "6.6.6.6";
+	public static final int tcpServerLocalIPInt = CommonMethods.ipStringToInt(tcpServerLocalIP);
+	public int port = 0;
 	public String vpnLocalIP;
 	ServerSocketChannel serverSocketChannel;
 	Selector selector = null;
@@ -31,13 +35,16 @@ public class TCPServer implements Runnable{
 			serverSocketChannel = ServerSocketChannel.open();
 			//serverSocketChannel.socket().setReuseAddress(true);
 			//serverSocketChannel.socket().bind(null);
-			serverSocketChannel.socket().bind(new InetSocketAddress(12320));
+			serverSocketChannel.socket().bind(new InetSocketAddress(0));
 			serverSocketChannel.configureBlocking(false);
 			serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
-			//Log.d(TAG,"TCPServer: protect是否成功: " + LocalVpnService.Instance.protect(port));
 			port = serverSocketChannel.socket().getLocalPort();
 
+//			Log.d(TAG,"protect port " + this.vpnService.protect(port));
+			Log.d(TAG,"protect getLocalPort: " + port);
+
 		}catch (Exception e){
+			Log.e(TAG,"创建ServerSocketChannel失败", e);
 		}
 		tcpThread = new Thread(this);
 		tcpThread.setName("TCPServer - Thread");
@@ -64,10 +71,10 @@ public class TCPServer implements Runnable{
 		}
 	}
 
-	private VpnService vpnService;
-	public TCPServer(VpnService vpnService, String localIP) {
+	private LocalVpnServiceKT vpnService;
+	public TCPServer(LocalVpnServiceKT vpnService, String tcpServerLocalIP) {
 		this.vpnService = vpnService;
-		this.vpnLocalIP = localIP;
+		this.vpnLocalIP = tcpServerLocalIP;
 
 	}
 
@@ -77,17 +84,21 @@ public class TCPServer implements Runnable{
 		// NATSessionManager.createSession(9867,
 		// CommonMethods.ipStringToInt("192.168.1.103"), (short) 7777);
 		//
-		Log.d(TAG,"TCPServer: TCP服务器启动, 端口为: " + port);
+		Log.d(TAG,"TCP服务器启动, 端口为: " + port);
 		/** 外循环，已经发生了SelectionKey数目 */
-		while (selector.select() > 0) {
+		while (tcpThread != null && !tcpThread.isInterrupted()) {
+			Log.d(TAG,"select()...");
+
+			selector.select();
+
 			/* 得到已经被捕获了的SelectionKey的集合 */
 			if(!selector.isOpen()){
-				throw new Exception("TCPServer: selector已经关闭");
+				throw new Exception("selector已经关闭");
 			}
 
 			Iterator<SelectionKey> iterator = selector.selectedKeys().iterator();
 			while (iterator.hasNext()) {
-				//Log.d(TAG,"TCPServer: TCP服务器收到消息");
+				Log.d(TAG,"TCP服务器收到消息");
 				SelectionKey key = null;
 				SocketChannel sc = null;
 				try {
@@ -96,8 +107,8 @@ public class TCPServer implements Runnable{
 					if (key.isAcceptable()) {
 						ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
 						sc = ssc.accept();
-//						Log.d(TAG,"客户端机子的地址是 " + sc.socket().getRemoteSocketAddress() + "  本地机子的端口号是 "
-//								+ sc.socket().getLocalPort());
+						Log.d(TAG,"客户端机子的地址是 " + sc.socket().getRemoteSocketAddress() + "  本地机子的端口号是 "
+								+ sc.socket().getLocalPort());
 						sc.configureBlocking(false);
 
 						TwinsChannel twins = new TwinsChannel(sc, selector);
@@ -132,7 +143,9 @@ public class TCPServer implements Runnable{
 				} finally {
 
 				}
+				Thread.sleep(100);
 			}
+			Thread.sleep(100);
 		}
 		Log.d(TAG,"-----程序结束-----");
 	}
@@ -140,26 +153,26 @@ public class TCPServer implements Runnable{
 	Pattern patternURL = Pattern.compile("^/([^:]+):(.*)$");
 
 	public void reveice(SelectionKey key) throws IOException {
-		// Log.d(TAG,"----收到Read事件----");
+		 Log.d(TAG,"----收到Read事件----");
 		if (key == null)
 			return;
 
 		SocketChannel sc = (SocketChannel) key.channel();
-		// Log.d(TAG,"消息来自: " + sc.getRemoteAddress().toString());
+		 Log.d(TAG,"消息来自: " + sc.getRemoteAddress().toString());
 		Matcher matcher = patternURL.matcher(sc.getRemoteAddress().toString());
 		matcher.find();
 
 		TwinsChannel twins = (TwinsChannel) key.attachment();
 		// 如果消息来自本地, 转发出去
-		if (localIP.equals(matcher.group(1))) {
+		if (tcpServerLocalIP.equals(matcher.group(1))) {
 
 			if (!twins.remoteSc.isConnected()) {
 				// 如果正在连接，则完成连接
 				twins.remoteSc.finishConnect();
 				twins.remoteSc.configureBlocking(false);
 			} else {
-				// Log.d(TAG,"已经连接完成..");
-				//Log.d(TAG,"消息来自本地: " + sc.getRemoteAddress().toString());
+				 Log.d(TAG,"已经连接完成..");
+				Log.d(TAG,"消息来自本地: " + sc.getRemoteAddress().toString());
 				ByteBuffer buf = ByteBuffer.allocate(2014);
 				int bytesRead = sc.read(buf);
 				//String content = "";
@@ -174,7 +187,7 @@ public class TCPServer implements Runnable{
 			}
 		} else {
 			// 如果消息来自外部, 转给内部
-			//Log.d(TAG,"消息来自外部: " + sc.getRemoteAddress().toString());
+			Log.d(TAG,"消息来自外部: " + sc.getRemoteAddress().toString());
 			ByteBuffer buf = ByteBuffer.allocate(2014);
 			int bytesRead = sc.read(buf);
 			//String content = "";
@@ -194,7 +207,7 @@ public class TCPServer implements Runnable{
 		try {
 			service(this.vpnService);
 		} catch (Exception e) {
-			//e.printStackTrace();
+			Log.e(TAG,"TCP服务异常", e);
 		}
 	}
 

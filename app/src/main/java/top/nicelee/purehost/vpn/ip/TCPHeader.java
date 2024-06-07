@@ -1,6 +1,8 @@
 package top.nicelee.purehost.vpn.ip;
 
 
+import androidx.annotation.NonNull;
+
 import java.util.Locale;
 
 public class TCPHeader {
@@ -39,12 +41,20 @@ public class TCPHeader {
         return CommonMethods.readShort(m_Data, m_Offset + offset_src_port);
     }
 
+    public int getSourcePortInt() {
+        return CommonMethods.readUnsignedShort(m_Data, m_Offset + offset_src_port);
+    }
+
     public void setSourcePort(short value) {
         CommonMethods.writeShort(m_Data, m_Offset + offset_src_port, value);
     }
 
     public short getDestinationPort() {
         return CommonMethods.readShort(m_Data, m_Offset + offset_dest_port);
+    }
+
+    public int getDestinationPortInt() {
+        return CommonMethods.readUnsignedShort(m_Data, m_Offset + offset_dest_port);
     }
 
     public void setDestinationPort(short value) {
@@ -71,10 +81,10 @@ public class TCPHeader {
         return CommonMethods.readInt(m_Data, m_Offset + offset_ack);
     }
 
+    @NonNull
     @Override
     public String toString() {
-        // TODO Auto-generated method stub
-        return String.format(Locale.ENGLISH, "%s%s%s%s%s%s%d->%d %s:%s",
+        return String.format(Locale.ENGLISH, "%s%s%s%s%s%s%d->%d SeqID:%s, AckID:%s",
                 (getFlags() & SYN) == SYN ? "SYN " : "",
                 (getFlags() & ACK) == ACK ? "ACK " : "",
                 (getFlags() & PSH) == PSH ? "PSH " : "",

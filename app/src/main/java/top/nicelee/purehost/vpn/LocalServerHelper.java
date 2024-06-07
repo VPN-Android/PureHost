@@ -24,7 +24,7 @@ import top.nicelee.purehost.vpn.server.UDPServer;
 
 public class LocalServerHelper {
 
-    private static final String TAG = "LocalVpnService";
+    private static final String TAG = "LocalServerHelper";
 
     String vpnLocalIP = "168.168.168.168";
     int vpnLocalIPInt = CommonMethods.ipStringToInt(vpnLocalIP);
@@ -50,7 +50,7 @@ public class LocalServerHelper {
 
         tcpServer = new TCPServer(vpnService, vpnLocalIP);
         udpServer = new UDPServer(vpnService, vpnLocalIP);
-        //tcpServer.start();
+        tcpServer.start();
         udpServer.start();
     }
 
@@ -74,12 +74,12 @@ public class LocalServerHelper {
 
     private void onUDPPacketReceived(FileOutputStream vpnOutput, IPHeader ipHeader, UDPHeader udpHeader, ByteBuffer dnsBuffer, int size) {
         if (udpServer == null) {
-            Log.e(TAG, "UDP服务未启动");
+            Log.e(TAG + "_UDP", "UDP服务未启动");
             return;
         }
 
 
-        Log.d(TAG, "从TUN读取到UDP消息:: " + CommonMethods.ipIntToString(ipHeader.getSourceIP()) + ":" + udpHeader.getSourcePortInt() + " -> " + CommonMethods.ipIntToString(ipHeader.getDestinationIP()) + ":" + udpHeader.getDestinationPortInt());
+        Log.d(TAG + "_UDP", "从TUN读取到UDP消息:: " + CommonMethods.ipIntToString(ipHeader.getSourceIP()) + ":" + udpHeader.getSourcePortInt() + " -> " + CommonMethods.ipIntToString(ipHeader.getDestinationIP()) + ":" + udpHeader.getDestinationPortInt());
 
         int dstIP = ipHeader.getDestinationIP();
 
@@ -93,14 +93,14 @@ public class LocalServerHelper {
                 //Short dnsId = dnsPacket.Header.getID();
 
                 if (dnsPacket == null) {
-                    Log.e(TAG, "UDP, DNS 解析失败, 丢弃数据包");
+                    Log.e(TAG + "_UDP", "UDP, DNS 解析失败, 丢弃数据包");
                     return;
                 }
 
                 boolean isNeedPollution = false;
                 Question question = dnsPacket.Questions[0];
                 String ipAddr = ConfigReader.domainIpMap.get(question.Domain);
-                Log.d(TAG, "UDP, DNS 查询的地址是:" + question.Domain + " 查询结果：" + ipAddr + ", isNeedPollution:" + isNeedPollution);
+                Log.d(TAG + "_UDP", "UDP, DNS 查询的地址是:" + question.Domain + " 查询结果：" + ipAddr + ", isNeedPollution:" + isNeedPollution);
                 if (ipAddr != null) {
                     isNeedPollution = true;
                 } else {
@@ -110,7 +110,7 @@ public class LocalServerHelper {
                         if (ipAddr != null) {
                             isNeedPollution = true;
                         }
-                        Log.d(TAG, "UDP, DNS 查询的地址根目录是: " + matcher.group(1) + ", 查询结果：" + ipAddr + ", isNeedPollution:" + isNeedPollution);
+                        Log.d(TAG + "_UDP", "UDP, DNS 查询的地址根目录是: " + matcher.group(1) + ", 查询结果：" + ipAddr + ", isNeedPollution:" + isNeedPollution);
                     }
                 }
 
@@ -138,17 +138,17 @@ public class LocalServerHelper {
                     }
 
                     //Log.d(TAG, "第一次NAT:" + ipHeader + " udpServer端口:" + udpServer.port + " session: " + originSourcePort + ", 0x" + (originSourcePort & 0xFFFF));
-                    Log.d(TAG, "第一次NAT:: udpLocalServer: " + CommonMethods.ipIntToString(UDPServer.udpServerLocalIPInt) + ":" + udpServer.port);
+                    Log.d(TAG + "_UDP", "第一次NAT:: udpLocalServer: " + CommonMethods.ipIntToString(UDPServer.udpServerLocalIPInt) + ":" + udpServer.port);
 
-                    Log.d(TAG, String.format(Locale.ENGLISH, "第一次NAT:: sourceIP:sourcePort, %s:%s -> %s:%s",
+                    Log.d(TAG + "_UDP", String.format(Locale.ENGLISH, "第一次NAT:: sourceIP:sourcePort, %s:%s -> %s:%s",
                             CommonMethods.ipIntToString(ipHeader.getSourceIP()), udpHeader.getSourcePortInt(),
                             CommonMethods.ipIntToString(UDPServer.udpServerLocalIPInt), udpHeader.getSourcePortInt()));
 
-                    Log.d(TAG, String.format(Locale.ENGLISH, "第一次NAT:: dstIP:dstPort, %s:%s -> %s:%s",
+                    Log.d(TAG + "_UDP", String.format(Locale.ENGLISH, "第一次NAT:: dstIP:dstPort, %s:%s -> %s:%s",
                             CommonMethods.ipIntToString(ipHeader.getDestinationIP()), udpHeader.getDestinationPortInt(),
                             CommonMethods.ipIntToString(vpnLocalIPInt), (udpServer.port & 0xFFFF)));
 
-                    Log.d(TAG, String.format(Locale.ENGLISH, "第一次NAT:: 最终：%s:%s -> %s:%s",
+                    Log.d(TAG + "_UDP", String.format(Locale.ENGLISH, "第一次NAT:: 最终：%s:%s -> %s:%s",
                             CommonMethods.ipIntToString(UDPServer.udpServerLocalIPInt), udpHeader.getSourcePortInt(),
                             CommonMethods.ipIntToString(vpnLocalIPInt), (udpServer.port & 0xFFFF)));
 
@@ -165,38 +165,42 @@ public class LocalServerHelper {
                     vpnOutput.flush();
                 }
             } catch (Exception e) {
-                Log.d(TAG, "当前udp包不是DNS报文");
+                Log.d(TAG + "_UDP", "当前udp包不是DNS报文");
             }
         } else {
-            Log.d(TAG, "其它UDP信息,不做处理:" + ipHeader);
-            Log.d(TAG, "其它UDP信息,不做处理:" + udpHeader);
+            Log.d(TAG + "_UDP", "其它UDP信息,不做处理:" + ipHeader);
+            Log.d(TAG + "_UDP", "其它UDP信息,不做处理:" + udpHeader);
             //vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
         }
     }
 
     private void onTCPPacketReceived(FileOutputStream vpnOutput, IPHeader ipHeader, TCPHeader tcpHeader, int size) {
 
-        Log.d(TAG, "从TUN读取到TCP消息:" + ipHeader + "，tcp: " + tcpHeader);
+        Log.d(TAG + "_TCP", "从TUN读取到TCP消息:" + ipHeader + "，tcp: " + tcpHeader);
 
-        if (ipHeader.getDestinationIP() == CommonMethods.ipStringToInt(tcpServer.localIP)) {
-            //来自TCP服务器
+        if (ipHeader.getDestinationIP() == CommonMethods.ipStringToInt(tcpServer.tcpServerLocalIP)) {
+            // 本地TCP服务器，与外界服务器通信后，返回了数据
             NATSession session = NATSessionManager.getSession(tcpHeader.getDestinationPort());
             if (session != null) {
+
                 ipHeader.setSourceIP(session.remoteIP);
                 tcpHeader.setSourcePort(session.remotePort);
                 ipHeader.setDestinationIP(vpnLocalIPInt);
 
                 CommonMethods.ComputeTCPChecksum(ipHeader, tcpHeader);
+
+                Log.d(TAG + "_TCP", "第二次NAT，修改包的地址等信息，" + ipHeader);
+
                 try {
-                    Log.d(TAG, ">>>>>>>>>>>>>>> TCP:， 转发，" + ipHeader);
+                    Log.d(TAG + "_TCP", "写回给虚拟网卡，" + ipHeader + " " + tcpHeader);
 
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
                     vpnOutput.flush();
                 } catch (IOException e) {
-                    Log.e(TAG, "发送TCP数据包失败:" + e);
+                    Log.e(TAG + "_TCP", "发送TCP数据包失败:" + e);
                 }
             } else {
-                Log.d(TAG, "NoSession:" + ipHeader + ", " + tcpHeader);
+                Log.e(TAG + "_TCP", "NoSession:" + ipHeader + ", " + tcpHeader);
             }
         } else {
             //来自本地
@@ -205,25 +209,30 @@ public class LocalServerHelper {
             NATSession session = NATSessionManager.getSession(portKey);
             if (session == null || session.remoteIP != ipHeader.getDestinationIP() || session.remotePort != tcpHeader.getDestinationPort()) {
                 session = NATSessionManager.createSession(portKey, ipHeader.getDestinationIP(), tcpHeader.getDestinationPort());
-                Log.d(TAG, "key Port: " + portKey + " 0x" + (portKey & 0xFFFF));
-                Log.d(TAG, "ip : " + CommonMethods.ipIntToString(ipHeader.getDestinationIP()));
-                Log.d(TAG, "port : " + (int) (tcpHeader.getDestinationPort()) + " 0x" + (((int) (tcpHeader.getDestinationPort())) & 0xFFFF));
 
-                Log.d(TAG, "---------- createSession, :" + session.remoteHost + " " + session.remoteIP + " " + session.remotePort);
+                Log.d(TAG + "_TCP", CommonMethods.ipIntToString(ipHeader.getSourceIP()) + ":" + tcpHeader.getSourcePortInt()
+                        + " -> " + CommonMethods.ipIntToString(ipHeader.getDestinationIP()) + ":" + tcpHeader.getDestinationPortInt());
+
+                Log.d(TAG + "_TCP", "---------- createSession, :" + session.remoteHost + " " + CommonMethods.ipIntToString(session.remoteIP) + " " + session.remotePort);
+            } else {
+                Log.d(TAG + "_TCP", "---------- getSession, :" + session.remoteHost + " " + CommonMethods.ipIntToString(session.remoteIP) + " " + session.remotePort);
             }
-            ipHeader.setSourceIP(CommonMethods.ipStringToInt(tcpServer.localIP));
+
+            ipHeader.setSourceIP(TCPServer.tcpServerLocalIPInt);        // 6.6.6.6
             //tcpHeader.setSourcePort((short)13221);
             ipHeader.setDestinationIP(vpnLocalIPInt);
 
-            Log.d(TAG, "================= TCP消息:" + ipHeader + "tcp: " + tcpHeader + " " + tcpServer.port);
             tcpHeader.setDestinationPort((short) tcpServer.port);
             CommonMethods.ComputeTCPChecksum(ipHeader, tcpHeader);
+
+            Log.d(TAG + "_TCP", "第一次NAT，修改包的地址等信息，" + ipHeader);
+
             try {
-                Log.d(TAG, "================= TCP:， 写回去给虚拟网卡，" + ipHeader);
+                Log.d(TAG + "_TCP", "写入虚拟网卡，正常情况下，TCP本地服务会收到数据。" + ipHeader);
                 vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, size);
                 vpnOutput.flush();
             } catch (IOException e) {
-                Log.e(TAG, "发送TCP数据包失败:" + e);
+                Log.e(TAG + "_TCP", "发送TCP数据包失败:" + e);
             }
         }
     }

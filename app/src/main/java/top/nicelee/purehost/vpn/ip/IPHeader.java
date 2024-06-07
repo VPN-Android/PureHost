@@ -127,7 +127,7 @@ public class IPHeader {
     @NonNull
     @Override
     public String toString() {
-        return String.format(Locale.ENGLISH, "%s ---> %s, Protocol:%s, HeaderLength:%d",
+        return String.format(Locale.ENGLISH, "SourceIP:%s ---> DstDP:%s, Protocol:%s, HeaderLength:%d",
                 CommonMethods.ipIntToString(getSourceIP()),
                 CommonMethods.ipIntToString(getDestinationIP()),
                 getProtocol(),
