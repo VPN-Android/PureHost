@@ -1,5 +1,6 @@
 package top.nicelee.purehost;
 
+import android.os.SystemClock;
 import android.util.Log;
 
 import java.io.BufferedReader;
@@ -13,7 +14,7 @@ public class HttpGetTest {
             @Override
             public void run() {
                 try {
-                    URL url = new URL("https://baidu.com");
+                    URL url = new URL("https://weibo.com/newlogin?tabtype=list&gid=" + SystemClock.uptimeMillis()  + "&openLoginLayer=0&url=https%3A%2F%2Fweibo.com%2F");
                     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
                     // Set request method to GET

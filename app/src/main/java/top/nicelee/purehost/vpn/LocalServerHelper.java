@@ -26,7 +26,7 @@ public class LocalServerHelper {
 
     private static final String TAG = "LocalServerHelper";
 
-    String vpnLocalIP = "168.168.168.168";
+    public static final String vpnLocalIP = "168.168.168.168";
     int vpnLocalIPInt = CommonMethods.ipStringToInt(vpnLocalIP);
     TCPServer tcpServer;
     UDPServer udpServer;
@@ -133,8 +133,8 @@ public class LocalServerHelper {
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
                     vpnOutput.flush();
                 } else {
-                    if (NATSessionManager.getSession(originSourcePort) == null) {
-                        NATSessionManager.createSession(originSourcePort, dstIP, dstPort);
+                    if (NATSessionManager.getSession("UDP", originSourcePort) == null) {
+                        NATSessionManager.createSession("UDP", originSourcePort, dstIP, dstPort);
                     }
 
                     //Log.d(TAG, "第一次NAT:" + ipHeader + " udpServer端口:" + udpServer.port + " session: " + originSourcePort + ", 0x" + (originSourcePort & 0xFFFF));
@@ -178,9 +178,9 @@ public class LocalServerHelper {
 
         Log.d(TAG + "_TCP", "从TUN读取到TCP消息:" + ipHeader + "，tcp: " + tcpHeader);
 
-        if (ipHeader.getDestinationIP() == CommonMethods.ipStringToInt(tcpServer.tcpServerLocalIP)) {
+        if (ipHeader.getDestinationIP() == TCPServer.tcpServerLocalIPInt) {
             // 本地TCP服务器，与外界服务器通信后，返回了数据
-            NATSession session = NATSessionManager.getSession(tcpHeader.getDestinationPort());
+            NATSession session = NATSessionManager.getSession("TCP", tcpHeader.getDestinationPort());
             if (session != null) {
 
                 ipHeader.setSourceIP(session.remoteIP);
@@ -206,9 +206,9 @@ public class LocalServerHelper {
             //来自本地
             // 添加端口映射
             int portKey = tcpHeader.getSourcePort();
-            NATSession session = NATSessionManager.getSession(portKey);
+            NATSession session = NATSessionManager.getSession("TCP",portKey);
             if (session == null || session.remoteIP != ipHeader.getDestinationIP() || session.remotePort != tcpHeader.getDestinationPort()) {
-                session = NATSessionManager.createSession(portKey, ipHeader.getDestinationIP(), tcpHeader.getDestinationPort());
+                session = NATSessionManager.createSession("TCP", portKey, ipHeader.getDestinationIP(), tcpHeader.getDestinationPort());
 
                 Log.d(TAG + "_TCP", CommonMethods.ipIntToString(ipHeader.getSourceIP()) + ":" + tcpHeader.getSourcePortInt()
                         + " -> " + CommonMethods.ipIntToString(ipHeader.getDestinationIP()) + ":" + tcpHeader.getDestinationPortInt());

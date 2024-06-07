@@ -31,12 +31,13 @@ public class TCPServer implements Runnable{
 	Thread tcpThread;
 	public void start(){
 		try{
-			selector = Selector.open();
 			serverSocketChannel = ServerSocketChannel.open();
 			//serverSocketChannel.socket().setReuseAddress(true);
 			//serverSocketChannel.socket().bind(null);
 			serverSocketChannel.socket().bind(new InetSocketAddress(0));
 			serverSocketChannel.configureBlocking(false);
+
+			selector = Selector.open();
 			serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 			port = serverSocketChannel.socket().getLocalPort();
 
@@ -117,15 +118,6 @@ public class TCPServer implements Runnable{
 					}
 					if (key.isReadable()) {
 						reveice(key);
-					}
-				} catch (NullPointerException e) {
-					// 没有找到对应的Session
-					try {
-						if (sc != null) {
-							sc.close();
-						}
-					} catch (Exception cex) {
-						cex.printStackTrace();
 					}
 				} catch (Exception e) {
 					//e.printStackTrace();

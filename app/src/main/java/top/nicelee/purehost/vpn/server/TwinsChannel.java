@@ -41,7 +41,7 @@ public class TwinsChannel {
 
 		Matcher matcher = patternURL.matcher(localSc.getRemoteAddress().toString());
 		matcher.find();
-		NATSession session = NATSessionManager.getSession((short)Integer.parseInt(matcher.group(2)));
+		NATSession session = NATSessionManager.getSession("TCP",(short)Integer.parseInt(matcher.group(2)));
 		Log.d(TAG,"VpnService Socket Session: key Port: "+ (short)Integer.parseInt(matcher.group(2)));
 		if(session != null){
 			Log.d(TAG,"VpnService Socket Session: ip : "+ CommonMethods.ipIntToString(session.remoteIP));

@@ -18,7 +18,7 @@ class LocalVpnServiceKT : CoroutineService() {
         KoinJavaComponent.get(VpnViewModel::class.java)
     }
 
-    private var localIP: String = "168.168.168.168"
+    private var localIP: String = LocalServerHelper.vpnLocalIP
 
     override fun onCreate() {
         super.onCreate()

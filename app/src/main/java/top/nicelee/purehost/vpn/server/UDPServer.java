@@ -80,7 +80,7 @@ public class UDPServer implements Runnable {
                 Log.d(TAG, "收到udp消息: " + socketAddress);
                 if (udpServerLocalIP.equals(hostAddress)) {
                     Log.d(TAG, "UDPServer收到本地消息" + socketAddress);
-                    NATSession session = NATSessionManager.getSession((short) socketPort);
+                    NATSession session = NATSessionManager.getSession("UDP", (short) socketPort);
                     if (session == null) {
                         Log.d(TAG, "NATSessionManager中未找到session" + socketPort);
                         continue;
@@ -95,7 +95,7 @@ public class UDPServer implements Runnable {
                     NATSession session = new NATSession();
                     session.remoteIP = CommonMethods.ipStringToInt(hostAddress);
                     session.remotePort = (short) socketPort;
-                    Short port = NATSessionManager.getPort(session);
+                    Short port = NATSessionManager.getPort("UDP", session);
                     if (port == null) {
                         Log.d(TAG, "收到外部UDP消息, 未在Session中找到");
                         continue;
