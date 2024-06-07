@@ -13,7 +13,7 @@ public class HttpGetTest {
             @Override
             public void run() {
                 try {
-                    URL url = new URL("https://andforce.com/settings.json");
+                    URL url = new URL("https://baidu.com");
                     HttpURLConnection connection = (HttpURLConnection) url.openConnection();
 
                     // Set request method to GET

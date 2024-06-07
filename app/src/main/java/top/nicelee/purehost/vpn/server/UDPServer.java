@@ -7,6 +7,7 @@ import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -56,7 +57,7 @@ public class UDPServer implements Runnable {
             datagramPacket = new DatagramPacket(receMsgs, 28, receMsgs.length - 28);
 
             SocketAddress socketAddress = udpDatagramSocket.getLocalSocketAddress();
-            Log.d(TAG, "UDP服务器启动, 地址为: " + socketAddress);
+            Log.d(TAG, "UDP服务器启动, 地址为: ==============>\t" + socketAddress);
         } catch (SocketException e) {
             Log.e(TAG, "创建udpDatagramSocket失败", e);
         }
@@ -85,6 +86,7 @@ public class UDPServer implements Runnable {
                     }
                     Log.d(TAG, "NATSessionManager中找到session" + socketPort);
                     sendPacket = new DatagramPacket(receMsgs, 28, datagramPacket.getLength(), CommonMethods.ipIntToInet4Address(session.remoteIP), session.remotePort);
+                    Log.d(TAG, "构建数据包发送到远端目标服务器：remote:" + CommonMethods.ipIntToInet4Address(session.remoteIP) + ":" + (session.remotePort & 0xFFFF));
                     udpDatagramSocket.send(sendPacket);
                 } else {
                     Log.d(TAG, "UDPServer收到外部消息: " + socketAddress);
@@ -97,23 +99,40 @@ public class UDPServer implements Runnable {
                         Log.d(TAG, "收到外部UDP消息, 未在Session中找到");
                         continue;
                     }
-                    Log.d(TAG, "收到外部UDP消息, 在Session中找到, port: " + port + " ,port & 0xFF:" + (port & 0xFFFF));
+                    Log.d(TAG, "收到外部UDP消息, 在Session中找到, port: " + (port & 0xFFFF));
 
                     IPHeader ipHeader = new IPHeader(receMsgs, 0);
-                    ipHeader.Default();
-                    ipHeader.setDestinationIP(CommonMethods.ipStringToInt(vpnLocalIP));
+                    UDPHeader udpHeader = new UDPHeader(receMsgs, 20);
+
+                    Log.d(TAG, String.format(Locale.ENGLISH, "第二次NAT:: sourceIP:sourcePort, %s:%s -> %s:%s",
+                            CommonMethods.ipIntToString(ipHeader.getSourceIP()), udpHeader.getSourcePortInt(),
+                            CommonMethods.ipIntToString(UDPServer.udpServerLocalIPInt), udpHeader.getSourcePortInt()));
+
+                    Log.d(TAG, String.format(Locale.ENGLISH, "第二次NAT:: dstIP:dstPort, %s:%s -> %s:%s",
+                            CommonMethods.ipIntToString(ipHeader.getDestinationIP()), udpHeader.getDestinationPortInt(),
+                            CommonMethods.ipIntToString(CommonMethods.ipStringToInt(vpnLocalIP)), (port & 0xFFFF)));
+
+                    Log.d(TAG, String.format(Locale.ENGLISH, "第二次NAT:: 最终：%s:%s -> %s:%s",
+                            CommonMethods.ipIntToString(UDPServer.udpServerLocalIPInt), udpHeader.getSourcePortInt(),
+                            CommonMethods.ipIntToString(CommonMethods.ipStringToInt(vpnLocalIP)), (port & 0xFFFF)));
+
                     ipHeader.setSourceIP(session.remoteIP);
+                    ipHeader.setDestinationIP(CommonMethods.ipStringToInt(vpnLocalIP));
+
+                    ipHeader.setTos((byte) 0);
+                    ipHeader.setIdentification(0);
+                    ipHeader.setFlagsAndOffset((short) 0);
                     ipHeader.setTotalLength(20 + 8 + datagramPacket.getLength());
                     ipHeader.setHeaderLength(20);
                     ipHeader.setProtocol(IPHeader.UDP);
                     ipHeader.setTTL((byte) 30);
 
-                    UDPHeader udpHeader = new UDPHeader(receMsgs, 20);
                     udpHeader.setDestinationPort((short) port);
                     udpHeader.setSourcePort(session.remotePort);
                     udpHeader.setTotalLength(8 + datagramPacket.getLength());
 
-                    //LocalVpnService.Instance.sendUDPPacket(ipHeader, udpHeader);
+                    Log.d(TAG, "UDP, 把数据写回VPNService，此时发出UDP的App应该会收到消息");
+
                     vpnService.sendUDPPacket(ipHeader, udpHeader);
                 }
             }

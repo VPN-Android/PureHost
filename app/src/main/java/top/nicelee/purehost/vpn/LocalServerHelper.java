@@ -6,6 +6,7 @@ import android.util.Log;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Locale;
 import java.util.regex.Matcher;
 
 import top.nicelee.purehost.vpn.config.ConfigReader;
@@ -77,6 +78,9 @@ public class LocalServerHelper {
             return;
         }
 
+
+        Log.d(TAG, "从TUN读取到UDP消息:: " + CommonMethods.ipIntToString(ipHeader.getSourceIP()) + ":" + udpHeader.getSourcePortInt() + " -> " + CommonMethods.ipIntToString(ipHeader.getDestinationIP()) + ":" + udpHeader.getDestinationPortInt());
+
         int dstIP = ipHeader.getDestinationIP();
 
         //本地报文, 转发给[本地UDP服务器]
@@ -95,18 +99,18 @@ public class LocalServerHelper {
 
                 boolean isNeedPollution = false;
                 Question question = dnsPacket.Questions[0];
-                Log.d(TAG, "UDP, DNS 查询的地址是:" + question.Domain);
                 String ipAddr = ConfigReader.domainIpMap.get(question.Domain);
+                Log.d(TAG, "UDP, DNS 查询的地址是:" + question.Domain + " 查询结果：" + ipAddr + ", isNeedPollution:" + isNeedPollution);
                 if (ipAddr != null) {
                     isNeedPollution = true;
                 } else {
                     Matcher matcher = ConfigReader.patternRootDomain.matcher(question.Domain);
                     if (matcher.find()) {
-                        Log.d(TAG, "UDP, DNS 查询的地址根目录是: " + matcher.group(1));
                         ipAddr = ConfigReader.rootDomainIpMap.get(matcher.group(1));
                         if (ipAddr != null) {
                             isNeedPollution = true;
                         }
+                        Log.d(TAG, "UDP, DNS 查询的地址根目录是: " + matcher.group(1) + ", 查询结果：" + ipAddr + ", isNeedPollution:" + isNeedPollution);
                     }
                 }
 
@@ -132,6 +136,22 @@ public class LocalServerHelper {
                     if (NATSessionManager.getSession(originSourcePort) == null) {
                         NATSessionManager.createSession(originSourcePort, dstIP, dstPort);
                     }
+
+                    //Log.d(TAG, "第一次NAT:" + ipHeader + " udpServer端口:" + udpServer.port + " session: " + originSourcePort + ", 0x" + (originSourcePort & 0xFFFF));
+                    Log.d(TAG, "第一次NAT:: udpLocalServer: " + CommonMethods.ipIntToString(UDPServer.udpServerLocalIPInt) + ":" + udpServer.port);
+
+                    Log.d(TAG, String.format(Locale.ENGLISH, "第一次NAT:: sourceIP:sourcePort, %s:%s -> %s:%s",
+                            CommonMethods.ipIntToString(ipHeader.getSourceIP()), udpHeader.getSourcePortInt(),
+                            CommonMethods.ipIntToString(UDPServer.udpServerLocalIPInt), udpHeader.getSourcePortInt()));
+
+                    Log.d(TAG, String.format(Locale.ENGLISH, "第一次NAT:: dstIP:dstPort, %s:%s -> %s:%s",
+                            CommonMethods.ipIntToString(ipHeader.getDestinationIP()), udpHeader.getDestinationPortInt(),
+                            CommonMethods.ipIntToString(vpnLocalIPInt), (udpServer.port & 0xFFFF)));
+
+                    Log.d(TAG, String.format(Locale.ENGLISH, "第一次NAT:: 最终：%s:%s -> %s:%s",
+                            CommonMethods.ipIntToString(UDPServer.udpServerLocalIPInt), udpHeader.getSourcePortInt(),
+                            CommonMethods.ipIntToString(vpnLocalIPInt), (udpServer.port & 0xFFFF)));
+
                     ipHeader.setSourceIP(UDPServer.udpServerLocalIPInt);    // 7.7.7.7:7777
                     //udpHeader.setSourcePort(originPort);
                     ipHeader.setDestinationIP(vpnLocalIPInt);
@@ -143,7 +163,6 @@ public class LocalServerHelper {
 
                     vpnOutput.write(ipHeader.m_Data, ipHeader.m_Offset, ipHeader.getTotalLength());
                     vpnOutput.flush();
-                    Log.d(TAG, "[本地UDP服务] 转发给VPN:" + ipHeader + " udpServer端口:" + udpServer.port + " session: " + originSourcePort + ", 0x" + (originSourcePort & 0xFFFF));
                 }
             } catch (Exception e) {
                 Log.d(TAG, "当前udp包不是DNS报文");
@@ -157,7 +176,7 @@ public class LocalServerHelper {
 
     private void onTCPPacketReceived(FileOutputStream vpnOutput, IPHeader ipHeader, TCPHeader tcpHeader, int size) {
 
-        Log.d(TAG, "TCP消息:" + ipHeader + "tcp: " + tcpHeader);
+        Log.d(TAG, "从TUN读取到TCP消息:" + ipHeader + "，tcp: " + tcpHeader);
 
         if (ipHeader.getDestinationIP() == CommonMethods.ipStringToInt(tcpServer.localIP)) {
             //来自TCP服务器
