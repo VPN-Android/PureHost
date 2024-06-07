@@ -17,7 +17,7 @@ import top.nicelee.purehost.vpn.ip.UDPHeader;
 
 public class UDPServer implements Runnable {
     private static final String TAG = "UDPServer";
-    public static final String udpServerLocalIP = "7.7.7.7";
+    public static final String udpServerLocalIP = "198.198.198.102";
     public static final int udpServerLocalIPInt = CommonMethods.ipStringToInt(udpServerLocalIP);
     public int port;
     public String vpnLocalIP;

@@ -113,7 +113,11 @@ public class TCPServer implements Runnable{
 						sc.configureBlocking(false);
 
 						TwinsChannel twins = new TwinsChannel(sc, selector);
-						twins.connectRemoteSc(vpnService);
+						SocketChannel remoteSc = twins.connectRemoteSc(vpnService);
+
+						remoteSc.register(selector, SelectionKey.OP_READ, twins);// buffer通过附件方式，传递
+						remoteSc.register(selector, SelectionKey.OP_WRITE, twins);// buffer通过附件方式，传递
+
 						sc.register(selector, SelectionKey.OP_READ, twins);// buffer通过附件方式，传递
 					}
 					if (key.isReadable()) {
@@ -147,7 +151,7 @@ public class TCPServer implements Runnable{
 	public void reveice(SelectionKey key) throws IOException {
 		 Log.d(TAG,"----收到Read事件----");
 		if (key == null) {
-			Log.e(TAG,"key is null");
+			Log.e(TAG,">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>key is null");
 			return;
 		}
 
@@ -172,6 +176,7 @@ public class TCPServer implements Runnable{
 				String content = "";
 				while (bytesRead > 0) {
 					content += new String(buf.array(), 0, buf.position());
+					Log.d(TAG,"------------->>>>>>>>> Received packet size:: " + buf.position());
 					buf.flip();
 					twins.remoteSc.write(buf);
 					buf.clear();
@@ -187,6 +192,7 @@ public class TCPServer implements Runnable{
 			String content = "";
 			while (bytesRead > 0) {
 				content += new String(buf.array(), 0, buf.position());
+				Log.d(TAG,"===============>>>>>>>>> Received packet size:: " + buf.position());
 				buf.flip();
 				twins.localSc.write(buf);
 				buf.clear();
