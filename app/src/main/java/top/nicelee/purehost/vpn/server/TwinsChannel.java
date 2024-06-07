@@ -55,6 +55,7 @@ public class TwinsChannel {
 		Log.d(TAG,"VpnService Socket 正在连接中... "+ soAddr.toString());
 		remoteSc.connect(soAddr);
 		remoteSc.register(selector, SelectionKey.OP_READ, this);
+		remoteSc.register(selector, SelectionKey.OP_WRITE, this);
 		Log.d(TAG,"VpnService Socket 已经注册... "+ soAddr.toString());
 		return remoteSc;
 	}

@@ -176,9 +176,13 @@ public class LocalServerHelper {
 
     private void onTCPPacketReceived(FileOutputStream vpnOutput, IPHeader ipHeader, TCPHeader tcpHeader, int size) {
 
-        Log.d(TAG + "_TCP", "从TUN读取到TCP消息:" + ipHeader + "，tcp: " + tcpHeader);
-
         if (ipHeader.getDestinationIP() == TCPServer.tcpServerLocalIPInt) {
+            Log.d(TAG + "_TCP", "从TUN读取到TCP消息: tcp: " + tcpHeader);
+
+            Log.d(TAG + "_TCP", String.format(Locale.ENGLISH, "TCP, TCPServer返回的：%s:%s -> %s:%s",
+                    CommonMethods.ipIntToString(ipHeader.getSourceIP()), tcpHeader.getSourcePortInt(),
+                    CommonMethods.ipIntToString(ipHeader.getDestinationIP()), tcpHeader.getDestinationPortInt()));
+
             // 本地TCP服务器，与外界服务器通信后，返回了数据
             NATSession session = NATSessionManager.getSession("TCP", tcpHeader.getDestinationPort());
             if (session != null) {
@@ -203,6 +207,12 @@ public class LocalServerHelper {
                 Log.e(TAG + "_TCP", "NoSession:" + ipHeader + ", " + tcpHeader);
             }
         } else {
+            Log.d(TAG + "_TCP", "从TUN读取到TCP消息: tcp: " + tcpHeader);
+
+            Log.d(TAG + "_TCP", String.format(Locale.ENGLISH, "TCP, 来虚拟网卡,想直接往远端：%s:%s -> %s:%s",
+                    CommonMethods.ipIntToString(ipHeader.getSourceIP()), tcpHeader.getSourcePortInt(),
+                    CommonMethods.ipIntToString(ipHeader.getDestinationIP()), tcpHeader.getDestinationPortInt()));
+
             //来自本地
             // 添加端口映射
             int portKey = tcpHeader.getSourcePort();
@@ -210,15 +220,12 @@ public class LocalServerHelper {
             if (session == null || session.remoteIP != ipHeader.getDestinationIP() || session.remotePort != tcpHeader.getDestinationPort()) {
                 session = NATSessionManager.createSession("TCP", portKey, ipHeader.getDestinationIP(), tcpHeader.getDestinationPort());
 
-                Log.d(TAG + "_TCP", CommonMethods.ipIntToString(ipHeader.getSourceIP()) + ":" + tcpHeader.getSourcePortInt()
-                        + " -> " + CommonMethods.ipIntToString(ipHeader.getDestinationIP()) + ":" + tcpHeader.getDestinationPortInt());
-
-                Log.d(TAG + "_TCP", "---------- createSession, :" + session.remoteHost + " " + CommonMethods.ipIntToString(session.remoteIP) + " " + session.remotePort);
+                Log.d(TAG + "_TCP", "---------- createSession, KEY:" + portKey);
             } else {
-                Log.d(TAG + "_TCP", "---------- getSession, :" + session.remoteHost + " " + CommonMethods.ipIntToString(session.remoteIP) + " " + session.remotePort);
+                Log.d(TAG + "_TCP", "---------- getSession, KEY:" + portKey + " remoteHost:" + session.remoteHost);
             }
 
-            ipHeader.setSourceIP(TCPServer.tcpServerLocalIPInt);        // 6.6.6.6
+            ipHeader.setSourceIP(TCPServer.tcpServerLocalIPInt);
             //tcpHeader.setSourcePort((short)13221);
             ipHeader.setDestinationIP(vpnLocalIPInt);
 

@@ -103,7 +103,7 @@ public class TCPServer implements Runnable{
 				SelectionKey key = null;
 				SocketChannel sc = null;
 				try {
-					key = (SelectionKey) iterator.next();
+					key = iterator.next();
 					iterator.remove();
 					if (key.isAcceptable()) {
 						ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
@@ -118,6 +118,10 @@ public class TCPServer implements Runnable{
 					}
 					if (key.isReadable()) {
 						reveice(key);
+					}
+					if (key.isWritable()) {
+						// 打印输出
+						Log.d(TAG,"----收到Write事件----");
 					}
 				} catch (Exception e) {
 					//e.printStackTrace();
