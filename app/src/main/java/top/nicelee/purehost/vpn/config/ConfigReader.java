@@ -151,8 +151,7 @@ public class ConfigReader {
 			File file = new File(folder, "host");
 			//Log.d(TAG,MainActivity.path);
 			buWriter = new BufferedWriter(new FileWriter(file, false));
-			buWriter.write("#127.0.0.1 localhost\r\n");
-			buWriter.write("47.105.98.249 nicelee.top\r\n");
+			buWriter.write("127.0.0.1 baidu.com\r\n");
 			buWriter.flush();
 		}catch (Exception e){
 			e.printStackTrace();

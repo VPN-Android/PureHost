@@ -6,8 +6,9 @@ plugins {
 
 android {
     compileSdk 34
+    namespace 'top.nicelee.purehost'
     defaultConfig {
-        applicationId "top.nicelee.purehost"
+        applicationId "cn.llnao.mdm.center"
         minSdkVersion 24
         //noinspection ExpiredTargetSdkVersion
         targetSdkVersion 28
