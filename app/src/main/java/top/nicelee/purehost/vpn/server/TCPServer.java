@@ -19,8 +19,8 @@ import top.nicelee.purehost.vpn.LocalVpnService;
 public class TCPServer implements Runnable{
 	private static final String TAG = "TCPServer";
 	// Socket协议服务端
-	public String localIP = "6.6.6.6";
-	public int port;
+	public String localIP = "7.7.7.9";
+	public short Port;
 	public String vpnLocalIP;
 	ServerSocketChannel serverSocketChannel;
 	Selector selector = null;
@@ -32,11 +32,11 @@ public class TCPServer implements Runnable{
 			serverSocketChannel = ServerSocketChannel.open();
 			//serverSocketChannel.socket().setReuseAddress(true);
 			//serverSocketChannel.socket().bind(null);
-			serverSocketChannel.socket().bind(new InetSocketAddress(12320));
+			serverSocketChannel.socket().bind(new InetSocketAddress(0));
 			serverSocketChannel.configureBlocking(false);
 			serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT);
 			//Log.d(TAG,"TCPServer: protect是否成功: " + LocalVpnService.Instance.protect(port));
-			port = serverSocketChannel.socket().getLocalPort();
+			Port = (short) serverSocketChannel.socket().getLocalPort();
 
 		}catch (Exception e){
 		}
@@ -68,7 +68,7 @@ public class TCPServer implements Runnable{
 		// NATSessionManager.createSession(9867,
 		// CommonMethods.ipStringToInt("192.168.1.103"), (short) 7777);
 		//
-		Log.d(TAG,"TCPServer: TCP服务器启动, 端口为: " + port);
+		Log.d(TAG,"TCPServer: TCP服务器启动, 端口为: " + Port);
 		/** 外循环，已经发生了SelectionKey数目 */
 		while (selector.select() > 0) {
 			/* 得到已经被捕获了的SelectionKey的集合 */
@@ -87,8 +87,8 @@ public class TCPServer implements Runnable{
 					if (key.isAcceptable()) {
 						ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
 						sc = ssc.accept();
-//						Log.d(TAG,"客户端机子的地址是 " + sc.socket().getRemoteSocketAddress() + "  本地机子的端口号是 "
-//								+ sc.socket().getLocalPort());
+						Log.d(TAG,"客户端机子的地址是 " + sc.socket().getRemoteSocketAddress() + "  本地机子的端口号是 "
+								+ sc.socket().getLocalPort());
 						sc.configureBlocking(false);
 
 						TwinsChannel twins = new TwinsChannel(sc, selector);
@@ -131,12 +131,12 @@ public class TCPServer implements Runnable{
 	Pattern patternURL = Pattern.compile("^/([^:]+):(.*)$");
 
 	public void reveice(SelectionKey key) throws IOException {
-		// Log.d(TAG,"----收到Read事件----");
+		 Log.d(TAG,"----收到Read事件----");
 		if (key == null)
 			return;
 
 		SocketChannel sc = (SocketChannel) key.channel();
-		// Log.d(TAG,"消息来自: " + sc.getRemoteAddress().toString());
+		 Log.d(TAG,"消息来自: " + sc.getRemoteAddress().toString());
 		Matcher matcher = patternURL.matcher(sc.getRemoteAddress().toString());
 		matcher.find();
 
@@ -149,8 +149,8 @@ public class TCPServer implements Runnable{
 				twins.remoteSc.finishConnect();
 				twins.remoteSc.configureBlocking(false);
 			} else {
-				// Log.d(TAG,"已经连接完成..");
-				//Log.d(TAG,"消息来自本地: " + sc.getRemoteAddress().toString());
+				 Log.d(TAG,"已经连接完成..");
+				Log.d(TAG,"消息来自本地: " + sc.getRemoteAddress().toString());
 				ByteBuffer buf = ByteBuffer.allocate(2014);
 				int bytesRead = sc.read(buf);
 				//String content = "";
@@ -165,7 +165,7 @@ public class TCPServer implements Runnable{
 			}
 		} else {
 			// 如果消息来自外部, 转给内部
-			//Log.d(TAG,"消息来自外部: " + sc.getRemoteAddress().toString());
+			Log.d(TAG,"消息来自外部: " + sc.getRemoteAddress().toString());
 			ByteBuffer buf = ByteBuffer.allocate(2014);
 			int bytesRead = sc.read(buf);
 			//String content = "";

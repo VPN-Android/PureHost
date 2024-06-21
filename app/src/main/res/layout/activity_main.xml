@@ -47,6 +47,13 @@
             android:layout_toRightOf="@+id/btnStart"
             android:text="End" />
 
+        <Button
+            android:id="@+id/btnGet"
+            android:text="Get测试"
+            android:layout_toRightOf="@id/btnEnd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+
     </RelativeLayout >
 
     <EditText

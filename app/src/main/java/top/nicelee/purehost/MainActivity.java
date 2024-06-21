@@ -113,6 +113,18 @@ public class MainActivity extends Activity {
         //txtHeader.setFocusable(true);
         //txtHeader.requestFocus();
         //textDNS1.clearFocus();
+
+
+        findViewById(R.id.btnGet).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                try {
+                    new HttpGetTest().get();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        });
     }
 
     private void stopVPN(){

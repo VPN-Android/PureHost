@@ -25,7 +25,7 @@ import android.util.Log;
 
 public class UDPServer implements Runnable {
 	private static final String TAG = "UDPServer";
-	public String localIP = "7.7.7.7";
+	public static final String localIP = "10.8.0.3";
 	public int port = 7777;
 	public String vpnLocalIP;
 	
